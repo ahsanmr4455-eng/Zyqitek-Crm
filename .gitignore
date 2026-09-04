@@ -1,0 +1,17 @@
+node_modules/
+build/
+coverage/
+.DS_Store
+*.log
+dist/
+.env*
+!.env.example
+/firebase-applet-config.json
+!src/lib/firebase-applet-config.json
+*.patch
+temp_*
+fix_*.cjs
+fix_*.py
+patch_*.sh
+patch_*.cjs
+*.tmp

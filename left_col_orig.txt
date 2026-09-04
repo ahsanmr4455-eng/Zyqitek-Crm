@@ -1,0 +1,89 @@
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Client & Core Config */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">1. Client & Service Configuration</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Select Client *</label>
+                  <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3">
+                    <option value="">-- Choose Client --</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.company})</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Service Category *</label>
+                  <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedType(null); setSelectedFeatures([]); }} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3">
+                    <option value="">-- Choose Category --</option>
+                    {Object.keys(SERVICE_CATALOGS || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+                
+                {selectedCategory && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Service Type *</label>
+                    <select value={selectedType || ''} onChange={(e) => setSelectedType(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3">
+                      <option value="">-- Choose Type --</option>
+                      {(currentCatalog?.types || []).map((t: any) => <option key={t.name} value={t.name}>{t.name} - ${t.price}</option>)}
+                    </select>
+                  </div>
+                )}
+                
+                {selectedCategory && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Add-ons & Features</label>
+                    <select multiple value={selectedFeatures} onChange={(e) => setSelectedFeatures(Array.from(e.target.selectedOptions, o => o.value))} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all px-3 py-2 h-32">
+                      {(currentCatalog?.features || []).map((f: any) => <option key={f.name} value={f.name}>{f.name} (+${f.price})</option>)}
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Pricing Adjustments */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">2. Pricing Adjustments</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Quantity</label>
+                  <input type="number" min="1" value={itemQuantity} onChange={e => setItemQuantity(Number(e.target.value) || 1)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Extra Cost ($)</label>
+                  <input type="number" min="0" value={customExtraCost} onChange={e => setCustomExtraCost(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Discount Type</label>
+                  <select value={discountType} onChange={e => setDiscountType(e.target.value as any)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3">
+                    <option value="Percentage">% Percentage</option>
+                    <option value="Fixed">$ Fixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Discount Value</label>
+                  <input type="number" min="0" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Tax (%)</label>
+                  <input type="number" min="0" value={taxPercentage} onChange={e => setTaxPercentage(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3" />
+                </div>
+              </div>
+            </div>
+
+            {/* Logistics */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">3. Logistics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Delivery Date</label>
+                  <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Project Notes (Internal or Client)</label>
+                  <textarea value={projectNotes} onChange={e => setProjectNotes(e.target.value)} rows={3} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all p-3" />
+                </div>
+              </div>
+            </div>
+
+          </div>

@@ -1,0 +1,129 @@
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
+                <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2 tracking-wide uppercase">
+                  <FileText size={20} className="text-blue-600" />
+                  Quotation Details
+                </h3>
+                <button 
+                  onClick={() => {
+                    setSelectedClientId('');
+                    setSelectedCategory('');
+                    setSelectedType(null);
+                    setSelectedFeatures([]);
+                    setDiscountValue(0);
+                    setCustomExtraCost(0);
+                  }} 
+                  className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200/60"
+                >
+                  Reset Form
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {/* STEP 1 */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Step 1 — Select Client</h4>
+                  <div>
+                    <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-12 px-4 text-slate-900 font-medium">
+                      <option value="">-- Choose Client --</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.company})</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100"></div>
+
+                {/* STEP 2 */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Step 2 — Select Service Category</h4>
+                  <div>
+                    <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setSelectedType(null); setSelectedFeatures([]); }} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-12 px-4 text-slate-900 font-medium">
+                      <option value="">-- Choose Category --</option>
+                      {Object.keys(SERVICE_CATALOGS || {}).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {selectedCategory && (
+                  <>
+                    <div className="border-t border-slate-100"></div>
+
+                    {/* STEP 3 */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Step 3 — Select Package Type</h4>
+                      <div>
+                        <select value={selectedType || ''} onChange={(e) => setSelectedType(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-12 px-4 text-slate-900 font-medium">
+                          <option value="">-- Choose Type --</option>
+                          {(currentCatalog?.types || []).map((t: any) => <option key={t.name} value={t.name}>{t.name} - ${t.price}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-slate-100"></div>
+
+                    {/* STEP 4 */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Step 4 — Related Features & Options</h4>
+                      <div>
+                        <select multiple value={selectedFeatures} onChange={(e) => setSelectedFeatures(Array.from(e.target.selectedOptions, o => o.value))} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all px-4 py-3 h-32 text-slate-900 font-medium">
+                          {(currentCatalog?.features || []).map((f: any) => <option key={f.name} value={f.name} className="py-1">{f.name} (+${f.price})</option>)}
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Hold Ctrl/Cmd to select multiple</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="border-t border-slate-100"></div>
+
+                {/* PRICING & SCOPE SETTINGS */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Pricing & Scope Settings</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Quantity</label>
+                      <input type="number" min="1" value={itemQuantity} onChange={e => setItemQuantity(Number(e.target.value) || 1)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Extra Cost ($)</label>
+                      <input type="number" min="0" value={customExtraCost} onChange={e => setCustomExtraCost(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Discount Type</label>
+                      <select value={discountType} onChange={e => setDiscountType(e.target.value as any)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium">
+                        <option value="Percentage">% Percentage</option>
+                        <option value="Fixed">$ Fixed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Discount Value</label>
+                      <input type="number" min="0" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Tax (%)</label>
+                      <input type="number" min="0" value={taxPercentage} onChange={e => setTaxPercentage(Number(e.target.value) || '')} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100"></div>
+
+                {/* PROJECT NOTES & SPECIFICATIONS */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-extrabold text-slate-400 tracking-widest uppercase">Project Notes & Specifications</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Delivery Date</label>
+                      <input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all h-11 px-3 text-slate-900 font-medium" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">Internal/Client Notes</label>
+                      <textarea value={projectNotes} onChange={e => setProjectNotes(e.target.value)} rows={3} className="w-full text-sm rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all p-3 text-slate-900 font-medium" />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>

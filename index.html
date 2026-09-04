@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Aggressively suppress the read-only fetch error before any other listeners can catch it
+      window.addEventListener('error', function(event) {
+        if (event.message && (event.message.toLowerCase().includes('cannot set property fetch') || event.message.toLowerCase().includes('fetch of #<window>'))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        var msg = event.reason && event.reason.message ? event.reason.message : String(event.reason || '');
+        if (msg.toLowerCase().includes('cannot set property fetch') || msg.toLowerCase().includes('fetch of #<window>')) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+
+      // Instantly decide document background based on URL path to prevent any visual theme flashing
+      (function() {
+        try {
+          var path = window.location.pathname.toLowerCase();
+          var isPortal = path === '/p' || path.startsWith('/p/') || path.startsWith('/portal/');
+          var style = document.createElement('style');
+          if (isPortal) {
+            document.documentElement.style.backgroundColor = '#F8FAFC';
+            style.innerHTML = 'html, body { background-color: #F8FAFC !important; color: #0f172a !important; }';
+          } else {
+            document.documentElement.style.backgroundColor = '#000000';
+            style.innerHTML = 'html, body { background-color: #000000 !important; color: #ffffff !important; }';
+          }
+          document.head.appendChild(style);
+        } catch (e) {
+          console.warn('Failed to pre-set background theme:', e);
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zyqitek — Customer Relationship Management</title>
+    <meta name="description" content="Zyqitek — Customer Relationship Management" />
+    <meta property="og:title" content="Zyqitek" />
+    <meta property="og:description" content="Zyqitek — Customer Relationship Management" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2309090b' /%3E%3Cpath d='M26 24 H74 L32 76 H74' stroke='%23ffffff' stroke-width='12' stroke-linecap='round' stroke-linejoin='round' fill='none' /%3E%3Cpolygon points='56,52 74,40 64,68 46,80' fill='%2384cc16' /%3E%3C/svg%3E" />
+    <style>
+      #initial-loader {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="initial-loader" style="display: none !important;"></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Prevent TypeError: Cannot set property fetch of #<Window> which has only a getter
+      // by declaring a configurable fetch getter and setter on the global window.
+      try {
+        let currentFetch = window.fetch;
+        Object.defineProperty(window, 'fetch', {
+          get() {
+            return currentFetch;
+          },
+          set(val) {
+            console.warn('[GATEWAY] Safe intercept: window.fetch updated by a script.');
+            currentFetch = val;
+          },
+          configurable: true,
+          enumerable: true
+        });
+      } catch (e) {
+        console.warn('[GATEWAY] Could not define configurable window.fetch:', e);
+      }
+
+      const loader = document.getElementById('initial-loader');
+      
+      const isIgnoredError = (str) => {
+        if (!str) return false;
+        const text = String(str).toLowerCase();
+        return text.includes('websocket') || 
+               text.includes('ws://') || 
+               text.includes('wss://') || 
+               text.includes('hmr') || 
+               text.includes('vite') || 
+               text.includes('connection closed') || 
+               text.includes('closed without opened') || 
+               text.includes('failed to connect') || 
+               text.includes('socket') ||
+               text.includes('script error') ||
+               text.includes('resizeobserver') ||
+               text.includes('cannot set property fetch') ||
+               text.includes('fetch of #<window>');
+      };
+
+      const showError = (message, details) => {
+        if (isIgnoredError(message) || isIgnoredError(details)) {
+          console.warn('[GATEWAY] Ignored non-fatal event:', message, details);
+          return;
+        }
+
+        // If the application has already successfully mounted and hidden the loader,
+        // do not crash the running CRM for background/asynchronous events.
+        if (loader && loader.style.display === 'none') {
+          console.warn('[GATEWAY] Non-fatal post-mount event caught globally:', message, details);
+          return;
+        }
+
+        if (loader) {
+          loader.innerHTML = `
+            <div style="text-align: center; font-family: system-ui, -apple-system, sans-serif; max-width: 450px; padding: 24px; color: #ffffff;">
+              <h1 style="margin: 0 0 12px; font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">Access Restricted</h1>
+              <p style="margin: 0; color: #a1a1aa; font-size: 14px; line-height: 1.5;">Please use the correct CRM URL or contact administrator.</p>
+            </div>
+          `;
+          loader.style.display = 'flex';
+          loader.style.backgroundColor = '#000000';
+        }
+      };
+
+      window.addEventListener('error', (event) => {
+        const errMsg = event.message || '';
+        const errStack = event.error?.stack || '';
+        if (isIgnoredError(errMsg) || isIgnoredError(errStack)) {
+          console.warn('[GATEWAY] Ignored non-fatal error event:', errMsg);
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+
+        // Catch script/asset load errors only before initial mount
+        if (event.target && (event.target.tagName === 'SCRIPT' || event.target.tagName === 'LINK')) {
+          const src = event.target.src || event.target.href || '';
+          if (isIgnoredError(src)) return;
+          if (loader && loader.style.display !== 'none') {
+            showError('Failed to load critical application assets.', `Resource failed: ${src}`);
+          }
+          return;
+        }
+
+        if (loader && loader.style.display !== 'none') {
+          showError('An unexpected error occurred during startup.', event.message || event.error?.message || 'Unknown initialization exception.');
+        }
+      }, true);
+
+      window.addEventListener('unhandledrejection', (event) => {
+        const reasonStr = String(event.reason?.message || event.reason || '');
+        if (isIgnoredError(reasonStr)) {
+          console.warn('[GATEWAY] Ignored unhandled rejection:', reasonStr);
+          event.preventDefault();
+          return;
+        }
+        if (loader && loader.style.display !== 'none') {
+          showError('An unexpected asynchronous error occurred.', event.reason?.message || event.reason || 'Unhandled promise rejection.');
+        }
+      });
+    </script>
+  </body>
+</html>
+

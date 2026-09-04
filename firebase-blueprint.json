@@ -1,0 +1,444 @@
+{
+  "entities": {
+    "clients": {
+      "title": "Clients",
+      "description": "Client management records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "company": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "leads": {
+      "title": "Leads",
+      "description": "Lead pipeline and sales prospects",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "value": { "type": "number" },
+        "status": { "type": "string" },
+        "source": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "Client projects and tracker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientId": { "type": "string" },
+        "status": { "type": "string" },
+        "budget": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "calls": {
+      "title": "Calls",
+      "description": "Call logs and records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "duration": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["contactName"]
+    },
+    "team": {
+      "title": "Team",
+      "description": "Team members and staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "goals": {
+      "title": "Goals",
+      "description": "Company and sales goals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "target": { "type": "number" },
+        "current": { "type": "number" }
+      },
+      "required": ["title"]
+    },
+    "emailDiscussions": {
+      "title": "Email Discussions",
+      "description": "Email threads and logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "leadName": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["subject"]
+    },
+    "callDiscussions": {
+      "title": "Call Discussions",
+      "description": "Call discussion notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadName": { "type": "string" },
+        "summary": { "type": "string" }
+      },
+      "required": ["leadName"]
+    },
+    "conversationDiscussions": {
+      "title": "Conversation Discussions",
+      "description": "Chat and conversation logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadName": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["leadName"]
+    },
+    "tasks": {
+      "title": "Tasks",
+      "description": "Project and operational tasks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "assignee": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "Invoices and payments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["invoiceNumber"]
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Files and attachments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "System configuration and portal URLs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "portal_url": { "type": "string" },
+        "preview_url": { "type": "string" },
+        "redirect_url": { "type": "string" },
+        "redirect_enabled": { "type": "boolean" }
+      },
+      "required": ["id"]
+    },
+    "activities": {
+      "title": "Activities",
+      "description": "CRM activity logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action"]
+    },
+    "clientPortals": {
+      "title": "Client Portals",
+      "description": "Secure client portal accounts and access tokens",
+      "type": "object",
+      "properties": {
+        "portalId": { "type": "string" },
+        "secureToken": { "type": "string" },
+        "portalType": { "type": "string" },
+        "clientId": { "type": "string" },
+        "portalName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "portalData": { "type": "object" },
+        "folders": { "type": "array" },
+        "files": { "type": "array" }
+      },
+      "required": ["portalId", "secureToken"]
+    },
+    "teamPortals": {
+      "title": "Team Portals",
+      "description": "Secure team portal accounts and access tokens",
+      "type": "object",
+      "properties": {
+        "portalId": { "type": "string" },
+        "secureToken": { "type": "string" },
+        "portalType": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["portalId", "secureToken"]
+    },
+    "preHiringQuestions": {
+      "title": "Pre-Hiring Questions",
+      "description": "Question bank for technical assessments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "service": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "type": { "type": "string" },
+        "question": { "type": "string" },
+        "options": { "type": "array" },
+        "correctAnswer": { "type": "string" },
+        "expectedAnswer": { "type": "string" },
+        "points": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["service", "difficulty", "question"]
+    },
+    "preHiringCandidates": {
+      "title": "Pre-Hiring Candidates",
+      "description": "Candidate assessment results and test status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "candidateName": { "type": "string" },
+        "appliedService": { "type": "string" },
+        "experienceLevel": { "type": "string" },
+        "testStatus": { "type": "string" },
+        "totalScore": { "type": "number" },
+        "maxScore": { "type": "number" },
+        "percentage": { "type": "number" },
+        "hiringDecision": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["candidateName", "appliedService"]
+    },
+    "proposals": {
+      "title": "Proposals",
+      "description": "Client proposals and quotations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "projectTitle": { "type": "string" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["clientName", "projectTitle"]
+    },
+    "pricingCatalog": {
+      "title": "Pricing Catalog",
+      "description": "Service offerings and pricing tiers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "services": { "type": "array" }
+      },
+      "required": ["id"]
+    },
+    "paymentDetails": {
+      "title": "Payment Details",
+      "description": "Bank and gateway payment details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bankName": { "type": "string" },
+        "accountTitle": { "type": "string" },
+        "accountNumber": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "teamInternalFiles": {
+      "title": "Team Internal Files",
+      "description": "Team project workspace files and documentation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "fileUrl": { "type": "string" },
+        "uploadedBy": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "teamPayments": {
+      "title": "Team Payments",
+      "description": "Team payroll and salary transaction records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "memberId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["memberId", "amount"]
+    },
+    "clientPayments": {
+      "title": "Client Payments",
+      "description": "Client invoice payment records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["clientId", "amount"]
+    },
+    "callScripts": {
+      "title": "Call Scripts",
+      "description": "Sales and discovery call scripts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "emailScripts": {
+      "title": "Email Scripts",
+      "description": "Outreach and follow-up email templates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "meetings": {
+      "title": "Meetings",
+      "description": "Scheduled discovery calls and client meetings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "attendees": { "type": "array" }
+      },
+      "required": ["title", "date"]
+    },
+    "conversations": {
+      "title": "Conversations",
+      "description": "Real-time portal chat conversations metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "type": { "type": "string" },
+        "participantIds": { "type": "array" },
+        "clientId": { "type": "string" },
+        "teamMemberId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string" },
+        "lastMessageSenderId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["conversationId"]
+    },
+    "portalMessages": {
+      "title": "Portal Messages",
+      "description": "Real-time internal chat messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "portalId": { "type": "string" },
+        "portalType": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "readStatus": { "type": "boolean" },
+        "attachment": { "type": "object" }
+      },
+      "required": ["conversationId", "senderId"]
+    },
+    "portalPresence": {
+      "title": "Portal Presence",
+      "description": "User online presence and last active heartbeat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "portalId": { "type": "string" },
+        "portalType": { "type": "string" },
+        "name": { "type": "string" },
+        "lastActive": { "type": "string" },
+        "isOnline": { "type": "boolean" }
+      },
+      "required": ["id"]
+    }
+  },
+  "firestore": {
+    "/clients/{clientId}": { "schema": "clients", "description": "Clients collection" },
+    "/leads/{leadId}": { "schema": "leads", "description": "Leads collection" },
+    "/projects/{projectId}": { "schema": "projects", "description": "Projects collection" },
+    "/calls/{callId}": { "schema": "calls", "description": "Calls collection" },
+    "/team/{memberId}": { "schema": "team", "description": "Team members collection" },
+    "/goals/{goalId}": { "schema": "goals", "description": "Goals collection" },
+    "/emailDiscussions/{emailId}": { "schema": "emailDiscussions", "description": "Email discussions collection" },
+    "/callDiscussions/{callId}": { "schema": "callDiscussions", "description": "Call discussions collection" },
+    "/conversationDiscussions/{convId}": { "schema": "conversationDiscussions", "description": "Conversation discussions collection" },
+    "/tasks/{taskId}": { "schema": "tasks", "description": "Tasks collection" },
+    "/invoices/{invoiceId}": { "schema": "invoices", "description": "Invoices collection" },
+    "/documents/{docId}": { "schema": "documents", "description": "Documents collection" },
+    "/settings/{settingId}": { "schema": "settings", "description": "Settings collection" },
+    "/activities/{activityId}": { "schema": "activities", "description": "Activities collection" },
+    "/clientPortals/{portalId}": { "schema": "clientPortals", "description": "Client Portals collection" },
+    "/teamPortals/{portalId}": { "schema": "teamPortals", "description": "Team Portals collection" },
+    "/preHiringQuestions/{questionId}": { "schema": "preHiringQuestions", "description": "Pre-hiring questions collection" },
+    "/preHiringCandidates/{candidateId}": { "schema": "preHiringCandidates", "description": "Pre-hiring candidates collection" },
+    "/proposals/{proposalId}": { "schema": "proposals", "description": "Proposals collection" },
+    "/pricingCatalog/{itemId}": { "schema": "pricingCatalog", "description": "Pricing catalog collection" },
+    "/paymentDetails/{itemId}": { "schema": "paymentDetails", "description": "Payment details collection" },
+    "/teamInternalFiles/{fileId}": { "schema": "teamInternalFiles", "description": "Team internal files collection" },
+    "/teamPayments/{paymentId}": { "schema": "teamPayments", "description": "Team payments collection" },
+    "/clientPayments/{paymentId}": { "schema": "clientPayments", "description": "Client payments collection" },
+    "/callScripts/{scriptId}": { "schema": "callScripts", "description": "Call scripts collection" },
+    "/emailScripts/{scriptId}": { "schema": "emailScripts", "description": "Email scripts collection" },
+    "/meetings/{meetingId}": { "schema": "meetings", "description": "Meetings collection" },
+    "/conversations/{conversationId}": { "schema": "conversations", "description": "Conversations collection" },
+    "/conversations/{conversationId}/messages/{messageId}": { "schema": "portalMessages", "description": "Messages subcollection" },
+    "/portalMessages/{messageId}": { "schema": "portalMessages", "description": "Portal messages collection" },
+    "/portalPresence/{presenceId}": { "schema": "portalPresence", "description": "Portal presence collection" }
+  }
+}

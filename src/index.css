@@ -1,0 +1,543 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Inter:ital,wght@0,300..900;1,300..900&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --breakpoint-xs: 420px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4k: 2560px;
+  --breakpoint-uhd: 3840px;
+  --breakpoint-5k: 3840px;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Inter", monospace;
+  --font-structure: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ========================================================= */
+/* GLOBAL DESIGN SYSTEM VARIABLES                            */
+/* ========================================================= */
+
+@layer base {
+  :root {
+    --crm-bg: #000000;
+    --crm-sidebar: #FFFFFF;
+    --crm-sidebar-text: #475569;
+    --crm-sidebar-active-bg: #F3F4F6;
+    --crm-sidebar-active-text: #111827;
+    --crm-card: #F9FAFB;
+    --crm-card-border: #E5E7EB;
+    --crm-text: #111827;
+    --crm-text-secondary: #334155;
+    --crm-text-muted: #64748B;
+    --crm-primary: #4F46E5;
+    --crm-primary-rgb: 79, 70, 229;
+    --crm-accent: #3B82F6;
+    --crm-accent-rgb: 59, 130, 246;
+    --crm-primary-hover: #4338CA;
+    --crm-heading: #111827;
+    --crm-subtitle: #475569;
+    --crm-radius: 16px;
+    --crm-input-bg: #FFFFFF;
+  }
+
+  .dark {
+    --crm-bg: #0A0D14;
+    --crm-sidebar: #111318;
+    --crm-sidebar-text: #D1D5DB;
+    --crm-sidebar-active-bg: #1F232D;
+    --crm-sidebar-active-text: #FFFFFF;
+    --crm-card: #14171F;
+    --crm-card-border: #232834;
+    --crm-text: #F9FAFB;
+    --crm-text-secondary: #D1D5DB;
+    --crm-text-muted: #9CA3AF;
+    --crm-primary: #6366F1;
+    --crm-primary-rgb: 99, 102, 241;
+    --crm-accent: #3B82F6;
+    --crm-accent-rgb: 59, 130, 246;
+    --crm-primary-hover: #4F46E5;
+    --crm-heading: #FFFFFF;
+    --crm-subtitle: #D1D5DB;
+    --crm-radius: 16px;
+    --crm-input-bg: #1A1D24;
+  }
+
+  body {
+    @apply bg-[var(--crm-bg)] text-[var(--crm-text)];
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0.012em;
+    line-height: 1.5;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+  }
+
+  html, body, #root {
+    background-color: var(--crm-bg);
+  }
+}
+
+/* Headings in CRM workspace adapt dynamically to light & dark themes */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700 !important;
+  color: var(--crm-heading);
+}
+
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+  font-weight: 700 !important;
+  color: var(--crm-heading);
+}
+
+/* Primary section main headings (h1) are bold white in all sections with stylish non-joining typography */
+main h1,
+.section-main-heading,
+[id$="-header"] h1,
+[id$="-view"] > div:first-child h1,
+h1.font-structure {
+  font-family: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+  color: #FFFFFF !important;
+}
+
+/* Specific Focus Mode Selections: Bold Black */
+aside h1,
+div#root aside h1 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-style: normal !important;
+}
+
+main h4 > span,
+main div:nth-of-type(3) h4 > span {
+  font-weight: 700 !important;
+  font-style: normal !important;
+}
+
+/* Section sub headings are white in all sections */
+.section-sub-heading,
+[id$="-header"] p,
+[id$="-view"] > div:first-child p,
+main > div > div > div > p.italic {
+  color: #fcf9f9 !important;
+}
+
+/* Ensure all login and authentication page text, labels, and titles are pure white */
+.auth-page label,
+.auth-page .auth-label {
+  color: #FFFFFF !important;
+}
+
+/* Subtle professional ambient background animations */
+@keyframes ambientDrift1 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translate3d(30px, -40px, 0) scale(1.08);
+    opacity: 0.35;
+  }
+}
+
+@keyframes ambientDrift2 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1.05);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate3d(-35px, 30px, 0) scale(0.95);
+    opacity: 0.3;
+  }
+}
+
+@keyframes ambientDrift3 {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate3d(20px, 35px, 0) scale(1.1);
+    opacity: 0.28;
+  }
+}
+
+@keyframes ambientGridShift {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 56px 56px;
+  }
+}
+
+.animate-ambient-1 {
+  animation: ambientDrift1 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-2 {
+  animation: ambientDrift2 24s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-ambient-3 {
+  animation: ambientDrift3 20s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-grid-subtle {
+  animation: ambientGridShift 40s linear infinite;
+  will-change: background-position;
+}
+
+label {
+  color: var(--crm-text-secondary);
+  font-weight: 500;
+}
+
+::placeholder {
+  color: var(--crm-text-muted);
+}
+
+/* Smooth theme and surface transitions */
+html, body, #root, main, aside, header, nav, section, article {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent transitions from conflicting with active spinners, icons, or animated elements */
+.animate-spin,
+.animate-spin-once,
+.animate-pulse,
+.animate-bounce,
+.no-transition,
+.no-transition * {
+  transition: none !important;
+}
+
+/* ========================================================= */
+/* ENHANCED ANIMATION SYSTEM & PORTAL DASHBOARD KEYFRAMES     */
+/* ========================================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoomIn95 {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes spinOnce {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes subtlePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-in {
+  animation-duration: 250ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.zoom-in {
+  animation-name: zoomIn;
+}
+
+.zoom-in-95 {
+  animation-name: zoomIn95;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slideInFromTop;
+}
+
+.slide-in-from-top-3 {
+  animation-name: slideInFromTop;
+}
+
+.slide-in-from-bottom-2 {
+  animation-name: slideInFromBottom;
+}
+
+.slide-in-from-left {
+  animation-name: slideInFromLeft;
+}
+
+.slide-in-from-right {
+  animation-name: slideInFromRight;
+}
+
+.animate-spin-once {
+  animation: spinOnce 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.duration-150 {
+  animation-duration: 150ms;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+.duration-500 {
+  animation-duration: 500ms;
+}
+
+.duration-700 {
+  animation-duration: 700ms;
+}
+
+/* Hide scrollbar for clean horizontal mobile tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.theme-switching,
+.theme-switching * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* GPU acceleration and performance utilities */
+.gpu-accel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+button, a, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+.overflow-y-auto, .overflow-x-auto, .overflow-auto {
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+}
+
+.font-structure {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* Sidebar specific overrides to ensure consistency */
+aside {
+  background-color: var(--crm-sidebar);
+}
+
+/* Form control consistency */
+input, select, textarea {
+  @apply focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all;
+}
+
+/* Table styling for dark mode */
+.dark table {
+  color: var(--crm-text);
+}
+
+.dark thead th {
+  background-color: var(--crm-sidebar);
+  color: var(--crm-text);
+  border-color: var(--crm-card-border);
+}
+
+.dark tbody tr {
+  border-color: var(--crm-card-border);
+  @apply hover:bg-[var(--crm-sidebar-active-bg)]/40 transition-colors;
+}
+
+/* Custom Scrollbar for Dark Mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--crm-bg);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--crm-card-border);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--crm-text-muted);
+}
+
+/* ========================================================= */
+/* DARK MODE SHARPNESS / SATURATION FIX FOR ACCENTS & BADGES  */
+/* ========================================================= */
+.dark .text-emerald-500,
+.dark .text-emerald-400,
+.dark .text-green-500,
+.dark .text-green-400 {
+  color: #4ADE80 !important;
+}
+
+.dark .text-indigo-500,
+.dark .text-indigo-400,
+.dark .text-purple-500,
+.dark .text-purple-400 {
+  color: #818CF8 !important;
+}
+
+.dark .text-blue-500,
+.dark .text-blue-400,
+.dark .text-sky-500,
+.dark .text-sky-400 {
+  color: #60A5FA !important;
+}
+
+.dark .text-amber-500,
+.dark .text-amber-400,
+.dark .text-yellow-500,
+.dark .text-yellow-400 {
+  color: #FBBF24 !important;
+}
+
+.dark .text-rose-500,
+.dark .text-rose-400,
+.dark .text-red-500,
+.dark .text-red-400 {
+  color: #F87171 !important;
+}
+
+/* Soft badge backgrounds in Dark Mode */
+.dark .bg-emerald-500\/10,
+.dark .bg-emerald-500\/20,
+.dark .bg-green-500\/10 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.22) !important;
+}
+
+.dark .bg-indigo-500\/10,
+.dark .bg-indigo-500\/20,
+.dark .bg-purple-500\/10 {
+  background-color: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.22) !important;
+}
+
+.dark .bg-blue-500\/10,
+.dark .bg-blue-500\/20,
+.dark .bg-sky-500\/10 {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.22) !important;
+}
+
+.dark .bg-amber-500\/10,
+.dark .bg-amber-500\/20,
+.dark .bg-yellow-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.22) !important;
+}
+
+.dark .bg-rose-500\/10,
+.dark .bg-rose-500\/20,
+.dark .bg-red-500\/10 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  border-color: rgba(244, 63, 94, 0.22) !important;
+}

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*",
+    "/verify-access-code",
+    "/verify_access_code.php"
+  ],
+  "exclude": []
+}
