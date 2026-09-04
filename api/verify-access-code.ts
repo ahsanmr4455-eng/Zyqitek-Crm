@@ -27,10 +27,38 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    const cleanCode = typeof code === 'string' ? code.trim() : '';
-    const validAccessCode = process.env.CRM_ACCESS_CODE || "Crown5002";
+    const normalizeSecret = (val: any): string | null => {
+      if (!val || typeof val !== 'string') return null;
+      let s = val.trim();
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        s = s.slice(1, -1).trim();
+      }
+      return s || null;
+    };
 
-    if (cleanCode && cleanCode === validAccessCode) {
+    const cleanCode = typeof code === 'string' ? code.trim() : '';
+    const candidateEnvs = [
+      process.env.CRM_ACCESS_CODE,
+      process.env.ACCESS_CODE,
+      process.env.VITE_CRM_ACCESS_CODE
+    ];
+    const validCodes: string[] = [];
+    for (const cand of candidateEnvs) {
+      const norm = normalizeSecret(cand);
+      if (norm && !validCodes.includes(norm)) {
+        validCodes.push(norm);
+      }
+    }
+    if (validCodes.length === 0) {
+      validCodes.push("Crown5002");
+    }
+
+    const isCodeMatch = Boolean(
+      cleanCode &&
+      validCodes.some(v => cleanCode === v || cleanCode.toLowerCase() === v.toLowerCase())
+    );
+
+    if (isCodeMatch) {
       return res.status(200).json({
         status: "success",
         success: true

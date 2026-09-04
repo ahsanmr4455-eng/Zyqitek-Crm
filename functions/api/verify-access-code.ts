@@ -13,6 +13,15 @@ export const onRequestOptions = async () => {
   });
 };
 
+const normalizeSecret = (val: any): string | null => {
+  if (!val || typeof val !== 'string') return null;
+  let s = val.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s || null;
+};
+
 export const onRequest = async (context: any) => {
   const { request, env } = context;
 
@@ -31,19 +40,48 @@ export const onRequest = async (context: any) => {
     let body: any = {};
     const url = new URL(request.url);
 
-    if (request.method === "POST" || request.method === "PUT" || request.method === "PATCH") {
+    if (["POST", "PUT", "PATCH"].includes(request.method)) {
+      let bodyText = "";
       try {
-        const text = await request.text();
-        if (text) {
-          body = JSON.parse(text);
+        bodyText = await request.clone().text();
+      } catch (_e1) {
+        try {
+          bodyText = await request.text();
+        } catch (_e2) {
+          bodyText = "";
         }
-      } catch (_e) {
-        body = {};
+      }
+
+      if (bodyText) {
+        try {
+          body = JSON.parse(bodyText);
+        } catch (_e) {
+          body = {};
+          try {
+            const params = new URLSearchParams(bodyText);
+            for (const [k, v] of params.entries()) {
+              body[k] = v;
+            }
+          } catch (_e2) {}
+        }
       }
     }
 
-    const code = body?.code || url.searchParams.get("code") || body?.accessCode || url.searchParams.get("accessCode") || "";
-    const checkOnly = body?.checkOnly !== undefined ? body.checkOnly : url.searchParams.get("checkOnly") !== null;
+    const code =
+      body?.code ||
+      body?.accessCode ||
+      body?.access_code ||
+      body?.passcode ||
+      url.searchParams.get("code") ||
+      url.searchParams.get("accessCode") ||
+      url.searchParams.get("access_code") ||
+      url.searchParams.get("passcode") ||
+      "";
+
+    const checkOnly =
+      body?.checkOnly !== undefined
+        ? Boolean(body.checkOnly)
+        : url.searchParams.get("checkOnly") !== null;
 
     if (checkOnly) {
       return new Response(
@@ -53,10 +91,39 @@ export const onRequest = async (context: any) => {
     }
 
     const procEnv = typeof process !== 'undefined' ? process.env : undefined;
-    const validAccessCode = (env && env.CRM_ACCESS_CODE) ? env.CRM_ACCESS_CODE : (procEnv?.CRM_ACCESS_CODE || "Crown5002");
+
+    // Build candidate valid codes list matching server.ts behavior
+    const candidateEnvs = [
+      env?.CRM_ACCESS_CODE,
+      env?.ACCESS_CODE,
+      env?.VITE_CRM_ACCESS_CODE,
+      procEnv?.CRM_ACCESS_CODE,
+      procEnv?.ACCESS_CODE,
+      procEnv?.VITE_CRM_ACCESS_CODE,
+    ];
+
+    const validCodes: string[] = [];
+    for (const cand of candidateEnvs) {
+      const norm = normalizeSecret(cand);
+      if (norm && !validCodes.includes(norm)) {
+        validCodes.push(norm);
+      }
+    }
+
+    // Default fallback access code if no secret is explicitly defined
+    if (validCodes.length === 0) {
+      validCodes.push("Crown5002");
+    }
+
     const cleanCode = typeof code === "string" ? code.trim() : "";
 
-    if (cleanCode && cleanCode === validAccessCode) {
+    // Exact match or case-normalized match
+    const isCodeMatch = Boolean(
+      cleanCode &&
+      validCodes.some(v => cleanCode === v || cleanCode.toLowerCase() === v.toLowerCase())
+    );
+
+    if (isCodeMatch) {
       return new Response(
         JSON.stringify({ status: "success", success: true }),
         { status: 200, headers: corsHeaders }
@@ -78,3 +145,4 @@ export const onRequest = async (context: any) => {
 export const onRequestPost = onRequest;
 export const onRequestGet = onRequest;
 export const onRequestHead = onRequest;
+

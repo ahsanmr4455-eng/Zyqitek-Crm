@@ -72,17 +72,82 @@ export const onRequest = async (context: any) => {
 
   if (endpoint.includes("verify-access-code") || endpoint.includes("verify_access_code")) {
     let body: any = {};
-    if (request.method === "POST" || request.method === "PUT") {
+    if (["POST", "PUT", "PATCH"].includes(request.method)) {
+      let bodyText = "";
       try {
-        body = await request.json();
-      } catch (_e) {
-        body = {};
+        bodyText = await request.clone().text();
+      } catch (_e1) {
+        try {
+          bodyText = await request.text();
+        } catch (_e2) {
+          bodyText = "";
+        }
+      }
+
+      if (bodyText) {
+        try {
+          body = JSON.parse(bodyText);
+        } catch (_e) {
+          body = {};
+          try {
+            const params = new URLSearchParams(bodyText);
+            for (const [k, v] of params.entries()) {
+              body[k] = v;
+            }
+          } catch (_e2) {}
+        }
       }
     }
-    const code = body?.code || url.searchParams.get("code") || "";
+
+    const normalizeSecret = (val: any): string | null => {
+      if (!val || typeof val !== 'string') return null;
+      let s = val.trim();
+      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        s = s.slice(1, -1).trim();
+      }
+      return s || null;
+    };
+
+    const code =
+      body?.code ||
+      body?.accessCode ||
+      body?.access_code ||
+      body?.passcode ||
+      url.searchParams.get("code") ||
+      url.searchParams.get("accessCode") ||
+      url.searchParams.get("access_code") ||
+      url.searchParams.get("passcode") ||
+      "";
+
     const procEnv = typeof process !== 'undefined' ? process.env : undefined;
-    const validAccessCode = (env && env.CRM_ACCESS_CODE) ? env.CRM_ACCESS_CODE : (procEnv?.CRM_ACCESS_CODE || "Crown5002");
-    if (code && code.trim() === validAccessCode) {
+    const candidateEnvs = [
+      env?.CRM_ACCESS_CODE,
+      env?.ACCESS_CODE,
+      env?.VITE_CRM_ACCESS_CODE,
+      procEnv?.CRM_ACCESS_CODE,
+      procEnv?.ACCESS_CODE,
+      procEnv?.VITE_CRM_ACCESS_CODE,
+    ];
+
+    const validCodes: string[] = [];
+    for (const cand of candidateEnvs) {
+      const norm = normalizeSecret(cand);
+      if (norm && !validCodes.includes(norm)) {
+        validCodes.push(norm);
+      }
+    }
+
+    if (validCodes.length === 0) {
+      validCodes.push("Crown5002");
+    }
+
+    const cleanCode = typeof code === "string" ? code.trim() : "";
+    const isCodeMatch = Boolean(
+      cleanCode &&
+      validCodes.some(v => cleanCode === v || cleanCode.toLowerCase() === v.toLowerCase())
+    );
+
+    if (isCodeMatch) {
       return new Response(JSON.stringify({ status: "success", success: true }), { status: 200, headers: corsHeaders });
     }
     return new Response(JSON.stringify({ status: "error", success: false, error: "Incorrect access code. Please try again." }), { status: 400, headers: corsHeaders });
