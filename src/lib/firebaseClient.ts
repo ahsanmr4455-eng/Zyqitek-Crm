@@ -20,14 +20,21 @@ import defaultFirebaseConfig from './firebase-applet-config.json';
 
 // Safe browser Firebase client configuration
 // Defaults to the project config file with optional environment variable overrides
-const firebaseConfig = {
-  apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || defaultFirebaseConfig.apiKey || 'dummy',
-  authDomain: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN) || defaultFirebaseConfig.authDomain || 'dummy',
-  projectId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_PROJECT_ID) || defaultFirebaseConfig.projectId || 'dummy',
-  storageBucket: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET) || defaultFirebaseConfig.storageBucket || 'dummy',
-  messagingSenderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || defaultFirebaseConfig.messagingSenderId || 'dummy',
-  appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_APP_ID) || defaultFirebaseConfig.appId || 'dummy',
-  firestoreDatabaseId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_DATABASE_ID) || defaultFirebaseConfig.firestoreDatabaseId || '(default)'
+const env = typeof import.meta !== 'undefined' ? import.meta.env : ({} as any);
+
+export const isFirebaseConfigured = Boolean(
+  (env?.VITE_FIREBASE_API_KEY && env.VITE_FIREBASE_API_KEY !== 'dummy') ||
+  (defaultFirebaseConfig.apiKey && defaultFirebaseConfig.apiKey !== 'dummy')
+);
+
+export const firebaseConfig = {
+  apiKey: env?.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey || 'dummy',
+  authDomain: env?.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain || 'dummy',
+  projectId: env?.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId || 'dummy',
+  storageBucket: env?.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket || 'dummy',
+  messagingSenderId: env?.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId || 'dummy',
+  appId: env?.VITE_FIREBASE_APP_ID || defaultFirebaseConfig.appId || 'dummy',
+  firestoreDatabaseId: env?.VITE_FIREBASE_DATABASE_ID || defaultFirebaseConfig.firestoreDatabaseId || '(default)'
 };
 
 // Initialize Firebase App (singleton pattern across entire client app)

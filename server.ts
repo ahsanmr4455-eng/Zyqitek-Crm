@@ -8,6 +8,7 @@ import bcryptjs from "bcryptjs";
 import { GoogleGenAI, Type } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import admin from "firebase-admin";
+import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert as adminCert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import multer from "multer";
@@ -32,7 +33,7 @@ let storageBucket: any = null;
 function isPlaceholder(val: string | undefined): boolean {
   if (!val) return true;
   const v = val.toLowerCase();
-  return v === "nono" || v === "non" || v === "xxxxx" || v.includes("your-") || v.includes("firebase-adminsdk-xxxxx");
+  return v === "dummy" || v === "nono" || v === "non" || v === "xxxxx" || v.includes("your-") || v.includes("firebase-adminsdk-xxxxx");
 }
 
 try {
@@ -41,10 +42,10 @@ try {
   const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!isPlaceholder(envProjectId) && (!isPlaceholder(envClientEmail) || !isPlaceholder(envPrivateKey))) {
-    if (!(admin as any).apps?.length) {
+    if (!getAdminApps().length) {
       const privateKey = (envPrivateKey || "").replace(/\\n/g, '\n');
-      admin.initializeApp({
-        credential: (admin as any).credential.cert({
+      initializeAdminApp({
+        credential: adminCert({
           projectId: envProjectId,
           clientEmail: envClientEmail || "",
           privateKey: privateKey,
@@ -65,24 +66,20 @@ try {
       const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
       const pId = firebaseConfig.projectId;
       const dbId = firebaseConfig.firestoreDatabaseId;
-      console.log(`[PORTAL BACKEND] Initializing Firebase Admin with config file. Project: ${pId}, Database: ${dbId || "(default)"}`);
-      if (!(admin as any).apps?.length) {
-        admin.initializeApp({
-          projectId: pId,
-          storageBucket: firebaseConfig.storageBucket || `${pId}.firebasestorage.app`,
-        });
+      if (!isPlaceholder(pId)) {
+        console.log(`[PORTAL BACKEND] Initializing Firebase Admin with config file. Project: ${pId}, Database: ${dbId || "(default)"}`);
+        if (!getAdminApps().length) {
+          initializeAdminApp({
+            projectId: pId,
+            storageBucket: firebaseConfig.storageBucket || `${pId}.firebasestorage.app`,
+          });
+        }
+        if (dbId && dbId !== "(default)" && !isPlaceholder(dbId)) {
+          firestoreDbInstance = getFirestore(dbId);
+        } else {
+          firestoreDbInstance = getFirestore();
+        }
       }
-      if (dbId && dbId !== "(default)") {
-        firestoreDbInstance = getFirestore(dbId);
-      } else {
-        firestoreDbInstance = getFirestore();
-      }
-    } else {
-      if (!(admin as any).apps?.length) {
-        admin.initializeApp();
-      }
-      firestoreDbInstance = getFirestore();
-      console.log("[PORTAL BACKEND] Firebase Admin initialized with default credentials.");
     }
   }
 } catch (error) {

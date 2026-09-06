@@ -35,6 +35,8 @@ import {
 } from 'lucide-react';
 import zyqitekLogoImg from '../assets/images/zyqitek_logo_1784722857265.jpg';
 import { EnterpriseBackgroundAnimation } from './EnterpriseBackgroundAnimation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '../lib/firebaseClient';
 
 interface LoginProps {
   onLogin: (token?: string, csrfToken?: string, role?: string, skipBrandedLoading?: boolean, firebaseToken?: string) => void;
@@ -284,16 +286,35 @@ export default function Login({ onLogin }: LoginProps) {
     let active = true;
     const checkLockouts = async (attemptCount = 1) => {
       try {
-        const res1 = await fetch('/api/login.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ checkOnly: true })
-        });
-        const data1 = await res1.json();
+        let res1: Response | null = null;
+        try {
+          res1 = await fetch('/api/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ checkOnly: true })
+          });
+        } catch (_e) {
+          res1 = null;
+        }
+
+        if (!res1 || res1.status === 404 || res1.status === 405) {
+          try {
+            res1 = await fetch('/api/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ checkOnly: true })
+            });
+          } catch (_e) {}
+        }
+
+        let data1: any = null;
+        if (res1 && res1.headers.get('content-type')?.includes('application/json')) {
+          try { data1 = await res1.json(); } catch (_j) {}
+        }
         if (!active) return;
 
-        if (res1.status === 429 || data1.status === 'locked' || data1.locked) {
-          const remaining1 = data1.lock_remaining_seconds || data1.remaining || 1800;
+        if (res1 && (res1.status === 429 || data1?.status === 'locked' || data1?.locked)) {
+          const remaining1 = data1?.lock_remaining_seconds || data1?.remaining || 1800;
           if (remaining1 > 0) {
             setLockoutTime(remaining1);
             setUsername('');
@@ -303,16 +324,35 @@ export default function Login({ onLogin }: LoginProps) {
           }
         }
 
-        const res2 = await fetch('/api/verify_admin_code.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ checkOnly: true })
-        });
-        const data2 = await res2.json();
+        let res2: Response | null = null;
+        try {
+          res2 = await fetch('/api/verify_admin_code.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ checkOnly: true })
+          });
+        } catch (_e) {
+          res2 = null;
+        }
+
+        if (!res2 || res2.status === 404 || res2.status === 405) {
+          try {
+            res2 = await fetch('/api/verify_admin_code', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ checkOnly: true })
+            });
+          } catch (_e) {}
+        }
+
+        let data2: any = null;
+        if (res2 && res2.headers.get('content-type')?.includes('application/json')) {
+          try { data2 = await res2.json(); } catch (_j) {}
+        }
         if (!active) return;
 
-        if (res2.status === 429 || data2.status === 'admin_locked' || data2.locked) {
-          const remaining2 = data2.lock_remaining_seconds || data2.remaining || 1800;
+        if (res2 && (res2.status === 429 || data2?.status === 'admin_locked' || data2?.locked)) {
+          const remaining2 = data2?.lock_remaining_seconds || data2?.remaining || 1800;
           if (remaining2 > 0) {
             setAdminLockoutTime(remaining2);
             setAdminCode('');
@@ -390,39 +430,96 @@ export default function Login({ onLogin }: LoginProps) {
 
     setIsLoading(true);
 
-    try {
-      const response = await fetch('/api/login.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: cleanUser,
-          password: cleanPass,
-          securityCode: cleanCode,
-          security_code: cleanCode
-        })
-      });
+    // 1. If username is an email address and Firebase is configured, attempt Firebase Authentication
+    if (cleanUser.includes('@') && isFirebaseConfigured) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, cleanUser, cleanPass);
+        const token = await userCredential.user.getIdToken();
+        setIsLoading(false);
+        setLoginResultData({
+          token: token,
+          csrfToken: token.slice(0, 32),
+          role: 'Admin',
+          firebaseToken: token
+        });
+        setLoginSuccess(true);
+        return;
+      } catch (fbErr: any) {
+        console.error('[FIREBASE AUTH ERROR]', fbErr);
+        setIsLoading(false);
+        const errorCode = fbErr?.code || 'auth/unknown';
+        const errorMsg = fbErr?.message || 'Firebase Authentication failed.';
+        // Logically expose the exact Firebase auth error as requested
+        setError(`Firebase Authentication error (${errorCode}): ${errorMsg}`);
+        return;
+      }
+    }
 
-      const data = await response.json();
+    // 2. Primary verification via CRM credentials endpoint (/api/login.php with fallback to /api/login)
+    try {
+      let response: Response | null = null;
+      try {
+        response = await fetch('/api/login.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: cleanUser,
+            password: cleanPass,
+            securityCode: cleanCode,
+            security_code: cleanCode
+          })
+        });
+      } catch (_e) {
+        response = null;
+      }
+
+      if (!response || response.status === 404 || response.status === 405) {
+        try {
+          response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: cleanUser,
+              password: cleanPass,
+              securityCode: cleanCode,
+              security_code: cleanCode
+            })
+          });
+        } catch (_err) {}
+      }
+
+      if (!response) {
+        setIsLoading(false);
+        setError("Network connection failure. Please check your network connection and try again.");
+        return;
+      }
+
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch (_jsonErr) {
+        data = null;
+      }
       setIsLoading(false);
 
-      if (response.status === 429 || data.status === 'locked' || data.locked) {
-        const serverRemaining = data.lock_remaining_seconds || data.remaining || 1800;
+      if (response.status === 429 || data?.status === 'locked' || data?.locked) {
+        const serverRemaining = data?.lock_remaining_seconds || data?.remaining || 1800;
         setLockoutTime(serverRemaining);
         setUsername('');
         setPassword('');
         setSecurityCode('');
-        setError("Too many failed login attempts. Your workspace has been temporarily locked for security reasons. Please try again later.");
+        setError(data?.error || "Too many failed login attempts. Your workspace has been temporarily locked for security reasons. Please try again later.");
         return;
       }
 
-      if ((data.status === 'admin_verification_required' || data.status === 'step1_success') && (data.tempToken || data.temp_token)) {
+      if ((data?.status === 'admin_verification_required' || data?.status === 'step1_success') && (data?.tempToken || data?.temp_token)) {
         setTempToken(data.tempToken || data.temp_token);
         setAuthStep('admin_verify');
         setAdminError(null);
         return;
       }
 
-      if (data.success && data.token) {
+      if (data?.success && data?.token) {
         setLoginResultData({
           token: data.token,
           csrfToken: data.csrf_token,
@@ -433,10 +530,13 @@ export default function Login({ onLogin }: LoginProps) {
         return;
       }
 
-      setError("Invalid login credentials. Please try again.");
-    } catch (err) {
+      // Display the actual server error or fall back to descriptive message
+      const serverErrMsg = data?.error || data?.message || "Invalid login credentials. Please check your username, password, and security code.";
+      setError(serverErrMsg);
+    } catch (err: any) {
       setIsLoading(false);
-      setError("Invalid login credentials. Please try again.");
+      console.error("[LOGIN ERROR]", err);
+      setError(err?.message || "Invalid login credentials. Please try again.");
     }
   };
 
@@ -452,19 +552,50 @@ export default function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/verify_admin_code.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          temp_token: tempToken,
-          admin_code: cleanAdminCode
-        })
-      });
+      let response: Response | null = null;
+      try {
+        response = await fetch('/api/verify_admin_code.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            temp_token: tempToken,
+            admin_code: cleanAdminCode,
+            code: cleanAdminCode
+          })
+        });
+      } catch (_e) {
+        response = null;
+      }
 
-      const data = await response.json();
+      if (!response || response.status === 404 || response.status === 405) {
+        try {
+          response = await fetch('/api/verify_admin_code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              temp_token: tempToken,
+              admin_code: cleanAdminCode,
+              code: cleanAdminCode
+            })
+          });
+        } catch (_err) {}
+      }
+
+      if (!response) {
+        setIsLoading(false);
+        setAdminError("Network connection failure. Please try again.");
+        return;
+      }
+
+      let data: any = null;
+      try {
+        data = await response.json();
+      } catch (_jsonErr) {
+        data = null;
+      }
       setIsLoading(false);
 
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setLoginResultData({
           token: data.token,
           csrfToken: data.csrfToken || data.csrf_token,
@@ -473,18 +604,19 @@ export default function Login({ onLogin }: LoginProps) {
         });
         setLoginSuccess(true);
       } else {
-        if (response.status === 429 || data.status === 'admin_locked' || data.locked) {
-          const serverRemaining = data.lock_remaining_seconds || data.remaining || 1800;
+        if (response.status === 429 || data?.status === 'admin_locked' || data?.locked) {
+          const serverRemaining = data?.lock_remaining_seconds || data?.remaining || 1800;
           setAdminLockoutTime(serverRemaining);
           setAdminCode('');
-          setAdminError("Too many failed login attempts. Your workspace has been temporarily locked for security reasons. Please try again later.");
+          setAdminError(data?.error || "Too many failed login attempts. Your workspace has been temporarily locked for security reasons. Please try again later.");
         } else {
-          setAdminError("Invalid login credentials. Please try again.");
+          setAdminError(data?.error || "Invalid Administrator Verification Code. Please try again.");
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       setIsLoading(false);
-      setAdminError("Invalid login credentials. Please try again.");
+      console.error("[ADMIN VERIFY ERROR]", err);
+      setAdminError(err?.message || "Administrator verification failed. Please try again.");
     }
   };
 
