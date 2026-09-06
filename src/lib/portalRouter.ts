@@ -63,9 +63,13 @@ export function parsePortalRoute(pathInput?: string): PortalRouteInfo | null {
  * Generates the secure, non-predictable URL for a Client or Team Portal.
  */
 export function generatePortalLink(type: 'client' | 'team', portalId: string, secureToken?: string): { primaryUrl: string; cleanPathUrl: string } {
+  const envDomain = typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_DOMAIN 
+    ? (import.meta.env.VITE_APP_DOMAIN.startsWith('http') ? import.meta.env.VITE_APP_DOMAIN : `https://${import.meta.env.VITE_APP_DOMAIN}`)
+    : '';
+
   const origin = (typeof window !== 'undefined' && window.location && window.location.origin)
     ? window.location.origin
-    : '';
+    : envDomain;
 
   // MUST use secureToken for link generation to prevent enumeration.
   // If no secure token is provided (legacy), we use the portalId, but ideally it should always exist.

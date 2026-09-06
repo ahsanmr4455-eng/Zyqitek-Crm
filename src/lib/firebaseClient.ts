@@ -27,11 +27,16 @@ export const isFirebaseConfigured = Boolean(
   (defaultFirebaseConfig.apiKey && defaultFirebaseConfig.apiKey !== 'dummy')
 );
 
+const rawProjectId = env?.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId || '';
+const rawAuthDomain = env?.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain || '';
+
 export const firebaseConfig = {
   apiKey: env?.VITE_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey || 'dummy',
-  authDomain: env?.VITE_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain || 'dummy',
-  projectId: env?.VITE_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId || 'dummy',
-  storageBucket: env?.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket || 'dummy',
+  authDomain: rawAuthDomain && rawAuthDomain !== 'dummy'
+    ? rawAuthDomain
+    : (rawProjectId && rawProjectId !== 'dummy' ? `${rawProjectId}.firebaseapp.com` : 'dummy'),
+  projectId: rawProjectId || 'dummy',
+  storageBucket: env?.VITE_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket || (rawProjectId && rawProjectId !== 'dummy' ? `${rawProjectId}.appspot.com` : 'dummy'),
   messagingSenderId: env?.VITE_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId || 'dummy',
   appId: env?.VITE_FIREBASE_APP_ID || defaultFirebaseConfig.appId || 'dummy',
   firestoreDatabaseId: env?.VITE_FIREBASE_DATABASE_ID || defaultFirebaseConfig.firestoreDatabaseId || '(default)'

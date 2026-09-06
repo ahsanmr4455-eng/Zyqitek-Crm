@@ -1624,7 +1624,7 @@ export default function Module() {
                   <div className="flex-1 bg-[var(--crm-card)] dark:bg-[var(--crm-card)] border border-[var(--crm-card-border)] dark:border-[var(--crm-card-border)] rounded-lg px-2 py-0.5 text-[10px] text-[var(--crm-text-muted)] font-mono flex items-center justify-between">
                     <div className="flex items-center gap-1 overflow-hidden truncate">
                       <Lock size={9} className="text-emerald-500 shrink-0" />
-                      <span className="truncate">https://localhost:3000/</span>
+                      <span className="truncate">{typeof window !== 'undefined' && window.location.origin ? window.location.origin + '/' : 'https://zyqitek0.vercel.app/'}</span>
                     </div>
                     <button onClick={() => setIframeReloadKey(k => k + 1)}>
                       <RefreshCw size={8} className="text-slate-350 hover:text-[var(--crm-text-secondary)] " />
@@ -1791,7 +1791,7 @@ export default function Module() {
         <div className="flex items-center gap-4">
           <span>Error count: <strong className="text-[var(--crm-text)]">0</strong></span>
           <span>|</span>
-          <span>Host: <strong className="text-[var(--crm-text)]">localhost</strong></span>
+          <span>Host: <strong className="text-[var(--crm-text)]">{typeof window !== 'undefined' && window.location.hostname ? window.location.hostname : 'zyqitek0.vercel.app'}</strong></span>
         </div>
       </footer>
 

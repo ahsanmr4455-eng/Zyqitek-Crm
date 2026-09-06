@@ -1,7 +1,8 @@
 // Vercel Serverless Function: /api/verify-access-code
 export default async function handler(req: any, res: any) {
   // CORS & Preflight headers
-  const origin = req.headers?.origin || "*";
+  const reqOrigin = req.headers?.origin;
+  const origin = reqOrigin || (req.headers?.host ? `https://${req.headers.host}` : "*");
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, Cookie");

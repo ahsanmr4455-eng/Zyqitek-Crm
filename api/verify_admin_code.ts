@@ -1,6 +1,7 @@
 // Vercel Serverless Function: /api/verify_admin_code (handles both /api/verify_admin_code and rewritten /api/verify_admin_code.php)
 export default async function handler(req: any, res: any) {
-  const origin = req.headers?.origin || "*";
+  const reqOrigin = req.headers?.origin;
+  const origin = reqOrigin || (req.headers?.host ? `https://${req.headers.host}` : "*");
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, Cookie");
