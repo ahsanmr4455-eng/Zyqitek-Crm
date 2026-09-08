@@ -218,7 +218,7 @@ export const LeadFinder: React.FC<LeadFinderProps> = ({
       if (!response.ok || !data.success) {
         if (data.error === 'API_NOT_CONFIGURED') {
           setIsApiConfigured(false);
-          setErrorMessage(data.message || 'Google Places API is not configured. Please set GOOGLE_MAPS_API_KEY in backend configuration or provide a valid Google Cloud API key.');
+          setErrorMessage(data.message || 'Google Places API is not configured. Please enter a valid Google Cloud API key below to search.');
         } else {
           setErrorMessage(data.message || 'Unable to retrieve Places data. Please check the Google Places API configuration.');
           showToast(data.message || 'Error retrieving Places data.', 'error');
@@ -1212,12 +1212,11 @@ export const LeadFinder: React.FC<LeadFinderProps> = ({
               <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-1 text-[var(--crm-text)]">
                 <p className="font-semibold text-xs flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
                   <Info size={13} />
-                  Configuration Options:
+                  Google Places Setup:
                 </p>
-                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-[var(--crm-subtitle)]">
-                  <li>Option 1: Add <code className="text-xs bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">GOOGLE_MAPS_API_KEY</code> or <code className="text-xs bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded">GOOGLE_PLACES_API_KEY</code> to your environment.</li>
-                  <li>Option 2: Enter your Google Cloud API key directly below for active session discovery.</li>
-                </ul>
+                <p className="text-[11px] text-[var(--crm-subtitle)]">
+                  Enter your Google Cloud API key directly below to search and discover local business leads in real-time.
+                </p>
               </div>
 
               <div>

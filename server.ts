@@ -3297,7 +3297,7 @@ app.post("/api/lead-finder/search", async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "API_NOT_CONFIGURED",
-        message: "Google Places API is not configured. Please set GOOGLE_MAPS_API_KEY in backend configuration or provide a custom API key.",
+        message: "Google Places API is not configured. Please provide a custom Google Cloud API key to search.",
       });
     }
 
