@@ -428,7 +428,7 @@ export async function resetAllCrmData(): Promise<boolean> {
       keysToRemove.forEach(k => localStorage.removeItem(k));
     }
 
-    // 2. Call backend reset endpoint to purge Firestore collections & MySQL records
+    // 2. Call backend reset endpoint to purge Firestore collections
     const res = await fetch('/api/reset-crm-data', {
       method: 'POST',
       headers: getHeaders({

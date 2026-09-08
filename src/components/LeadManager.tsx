@@ -4620,23 +4620,6 @@ export default function LeadManager({
                   </span>
                 </div>
 
-                {/* Header column badges */}
-                <div className="bg-[var(--crm-sidebar)] p-3.5 rounded-xl border border-[var(--crm-card-border)]/80 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-[var(--crm-text)] flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-emerald-500" /> Supported Header Columns:
-                    </span>
-                    <span className="text-[10px] bg-slate-200/80 px-2 py-0.5 rounded text-[var(--crm-text-secondary)] ">Auto-mapped</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 text-[11px]">
-                    {['Name', 'Email', 'Phone', 'Company', 'Status', 'Value', 'Category', 'Source', 'Notes'].map((col) => (
-                      <span key={col} className="px-2.5 py-1 bg-[var(--crm-card)] text-[var(--crm-text)] rounded-md border border-[var(--crm-card-border)]  shadow-2xs">
-                        {col}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Action buttons */}
                 <div className="flex items-center justify-between pt-2">
                   <button

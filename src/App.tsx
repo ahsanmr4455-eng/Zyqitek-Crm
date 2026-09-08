@@ -93,7 +93,7 @@ import {
 } from './lib/firebaseSync';
 
 export default function App() {
-  // Mock localStorage to guarantee all operations are directed only to the MySQL backend
+  // Mock localStorage to guarantee all operations are directed only to the backend database
   const localStorage = {
     getItem: (..._args: any[]): any => null,
     setItem: (..._args: any[]): void => {},
@@ -250,7 +250,7 @@ export default function App() {
     return res;
   };
 
-  // State hooks loaded dynamically from MySQL
+  // State hooks loaded dynamically from database
   const [leads, setLeads] = useState<Lead[]>([]);
   const [calls, setCalls] = useState<CallLog[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -1382,7 +1382,7 @@ export default function App() {
           return { success: false, lead, clientData: null, isExistingClient: false };
         }
 
-        // Secondary MySQL API endpoint (non-blocking)
+        // Secondary API endpoint (non-blocking)
         secureFetch('/api/add_client.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1487,10 +1487,10 @@ export default function App() {
         
       } else {
         const errorData = await response.json().catch(() => ({}));
-        showToast(errorData.error || `Failed to delete bulk leads from MySQL database.`, 'error');
+        showToast(errorData.error || `Failed to delete bulk leads from database.`, 'error');
       }
     } catch (err) {
-      showToast(`Network error: Failed to delete bulk leads from MySQL.`, 'error');
+      showToast(`Network error: Failed to delete bulk leads.`, 'error');
     }
   };
 
@@ -1632,10 +1632,10 @@ export default function App() {
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        showToast(errorData.error || "Failed to save call log to MySQL database.", "error");
+        showToast(errorData.error || "Failed to save call log to database.", "error");
       }
     } catch (err) {
-      showToast("Network error: Failed to log call to MySQL database.", "error");
+      showToast("Network error: Failed to log call to database.", "error");
     }
   };
 

@@ -22,10 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // =========================================================================
 // DATABASE CONFIGURATION
 // =========================================================================
-define('DB_HOST', 'sql213.infinityfree.com'); 
-define('DB_NAME', 'if0_42354648_crm3'); 
-define('DB_USER', 'if0_42354648'); 
-define('DB_PASSWORD', 'lqVEnBB67d'); 
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1'); 
+define('DB_NAME', getenv('DB_NAME') ?: ''); 
+define('DB_USER', getenv('DB_USER') ?: ''); 
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: ''); 
 
 $isSQLite = false;
 try {

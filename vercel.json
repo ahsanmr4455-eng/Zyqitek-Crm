@@ -4,30 +4,6 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/verify-access-code",
-      "destination": "/api/verify-access-code"
-    },
-    {
-      "source": "/api/login.php",
-      "destination": "/api/login"
-    },
-    {
-      "source": "/api/login",
-      "destination": "/api/login"
-    },
-    {
-      "source": "/api/verify_admin_code.php",
-      "destination": "/api/verify_admin_code"
-    },
-    {
-      "source": "/api/verify_admin_code",
-      "destination": "/api/verify_admin_code"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
-    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
