@@ -515,7 +515,7 @@ export default function App() {
     try {
       setSyncStatus('Syncing');
       setIsAutoSyncPaused(false);
-      showToast("Syncing local changes to Firestore...", "success");
+      showToast("Syncing local changes to server...", "success");
 
       const isConnected = await testFirestoreConnection();
       
@@ -539,19 +539,17 @@ export default function App() {
       });
       await fetchData();
 
-      
-
       if (isConnected && uploadSuccess) {
         setSyncStatus('Synced');
         setLastSyncTime(new Date());
-        showToast("Cloud synchronization completed successfully!", "success");
+        showToast("Server synchronization completed successfully!", "success");
       } else if (isConnected) {
         setSyncStatus('Synced');
         setLastSyncTime(new Date());
-        showToast("Synchronized with Firestore cloud storage.", "success");
+        showToast("Synchronized with server storage.", "success");
       } else {
         setSyncStatus('Error');
-        showToast("Sync warning: Could not reach Firestore cloud database.", "error");
+        showToast("Sync warning: Could not reach server backend.", "error");
       }
     } catch (err) {
       console.error("Error during manual sync:", err);
@@ -666,7 +664,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (token?: string, csrfToken?: string, role?: string, skipBrandedLoading: boolean = false, firebaseToken?: string) => {
+  const handleLogin = async (token?: string, csrfToken?: string, role?: string, skipBrandedLoading: boolean = false) => {
     sessionStorage.setItem('zyqro_logged_in', 'true');
     if (token) {
       sessionStorage.setItem('zyqro_session_token', token);
@@ -679,8 +677,6 @@ export default function App() {
       sessionStorage.setItem('zyqro_user_role', role);
     }
 
-    // Removed debug log
-
     if (!skipBrandedLoading) {
       setIsBrandedLoading(true);
     } else {
@@ -690,7 +686,6 @@ export default function App() {
     if (!skipBrandedLoading) {
       showToast("Signed in successfully.", "success");
     }
-    
   };
 
   const handleLogout = () => {
@@ -698,7 +693,6 @@ export default function App() {
     sessionStorage.removeItem('zyqro_session_token');
     sessionStorage.removeItem('zyqro_csrf_token');
     sessionStorage.removeItem('zyqro_user_role');
-    sessionStorage.removeItem('zyqro_firebase_token');
     sessionStorage.removeItem('zyqro_crm_access_granted');
     sessionStorage.clear();
     document.cookie = "zyqro_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure";

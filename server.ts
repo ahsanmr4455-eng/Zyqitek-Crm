@@ -4,11 +4,6 @@ import fs from "fs";
 import dotenv from "dotenv";
 import bcryptjs from "bcryptjs";
 import { GoogleGenAI, Type } from "@google/genai";
-import { createClient } from "@supabase/supabase-js";
-import admin from "firebase-admin";
-import { getApps as getAdminApps, initializeApp as initializeAdminApp, cert as adminCert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getStorage } from "firebase-admin/storage";
 import multer from "multer";
 
 dotenv.config();
@@ -25,132 +20,7 @@ const upload = multer({
 });
 
 // =========================================================================
-// FIREBASE / FIRESTORE INITIALIZATION & CONNECTION
-// =========================================================================
-
-let firestoreDbInstance: ReturnType<typeof getFirestore> | null = null;
-let isFirebaseAvailable = false;
-let firebaseError: string | null = null;
-
-function isPlaceholder(val: string | undefined): boolean {
-  if (!val) return true;
-  const v = val.toLowerCase();
-  return (
-    v === "dummy" ||
-    v === "nono" ||
-    v === "non" ||
-    v === "xxxxx" ||
-    v.includes("your-") ||
-    v.includes("firebase-adminsdk-xxxxx")
-  );
-}
-
-try {
-  const envProjectId = process.env.FIREBASE_PROJECT_ID;
-  const envClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
-
-  if (
-    !isPlaceholder(envProjectId) &&
-    (!isPlaceholder(envClientEmail) || !isPlaceholder(envPrivateKey))
-  ) {
-    if (!getAdminApps().length) {
-      const privateKey = (envPrivateKey || "").replace(/\\n/g, "\n");
-      initializeAdminApp({
-        credential: adminCert({
-          projectId: envProjectId,
-          clientEmail: envClientEmail || "",
-          privateKey: privateKey,
-        }),
-        storageBucket:
-          process.env.FIREBASE_STORAGE_BUCKET ||
-          `${envProjectId}.firebasestorage.app`,
-      });
-    }
-    const dbId =
-      process.env.FIREBASE_DATABASE_ID ||
-      process.env.FIREBASE_FIRESTORE_DATABASE_ID;
-    if (dbId && dbId !== "(default)" && !isPlaceholder(dbId)) {
-      firestoreDbInstance = getFirestore(dbId);
-    } else {
-      firestoreDbInstance = getFirestore();
-    }
-    console.log("[FIREBASE] Admin initialized with environment variables.");
-  } else {
-    const rootConfigPath = path.join(
-      process.cwd(),
-      "firebase-applet-config.json"
-    );
-    const srcConfigPath = path.join(
-      process.cwd(),
-      "src/lib/firebase-applet-config.json"
-    );
-    const configPath = fs.existsSync(rootConfigPath)
-      ? rootConfigPath
-      : fs.existsSync(srcConfigPath)
-      ? srcConfigPath
-      : null;
-    if (configPath && fs.existsSync(configPath)) {
-      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
-      const pId = firebaseConfig.projectId;
-      const dbId = firebaseConfig.firestoreDatabaseId;
-      if (!isPlaceholder(pId)) {
-        console.log(
-          `[FIREBASE] Initializing Admin with config file. Project: ${pId}, Database: ${
-            dbId || "(default)"
-          }`
-        );
-        if (!getAdminApps().length) {
-          initializeAdminApp({
-            projectId: pId,
-            storageBucket:
-              firebaseConfig.storageBucket || `${pId}.firebasestorage.app`,
-          });
-        }
-        if (dbId && dbId !== "(default)" && !isPlaceholder(dbId)) {
-          firestoreDbInstance = getFirestore(dbId);
-        } else {
-          firestoreDbInstance = getFirestore();
-        }
-      }
-    }
-  }
-} catch (error) {
-  console.error("[FIREBASE] Admin initialization error:", error);
-}
-
-function getFirestoreDb() {
-  if (!firestoreDbInstance) {
-    throw new Error(
-      "Firestore database instance not initialized. Check your Firebase configuration."
-    );
-  }
-  return firestoreDbInstance;
-}
-
-async function checkFirebaseConnection() {
-  try {
-    const db = getFirestoreDb();
-    await db.listCollections();
-    isFirebaseAvailable = true;
-    firebaseError = null;
-    console.log(
-      "[FIREBASE] Connection check PASSED. Firestore cloud database is active."
-    );
-  } catch (err: any) {
-    firebaseError = err.message || String(err);
-    isFirebaseAvailable = false;
-    console.log(
-      "[FIREBASE] Firestore connection status: server operating in high-availability mode with local persistence fallback."
-    );
-  }
-}
-
-// Check connectivity on startup
-checkFirebaseConnection();
-
-// =========================================================================
-// DATA REPOSITORY & HIGH-RELIABILITY LOCAL STATE (ZERO MYSQL)
+// DATA REPOSITORY & HIGH-RELIABILITY LOCAL STATE (IN-MEMORY / PERSISTENT DISK)
 // =========================================================================
 
 const memoryCollections: Record<string, Record<string, any>> = {
@@ -288,7 +158,7 @@ const collectionCache: Record<string, { items: any[]; timestamp: number }> = {};
 const COLLECTION_CACHE_TTL = 30000; // 30 seconds
 
 // =========================================================================
-// FIRESTORE CRUD HELPERS (WITH MEMORY SYNCHRONIZATION)
+// DATA CRUD HELPERS (IN-MEMORY WITH PERSISTENCE)
 // =========================================================================
 
 async function getCollectionDocs(
@@ -296,7 +166,6 @@ async function getCollectionDocs(
   sortField?: string,
   sortDirection: "asc" | "desc" = "desc"
 ): Promise<any[]> {
-  // Check cache first
   const now = Date.now();
   const cacheTtl =
     collectionName === "portalMessages" || collectionName === "portalPresence"
@@ -310,35 +179,7 @@ async function getCollectionDocs(
     return collectionCache[collectionName].items;
   }
 
-  if (isFirebaseAvailable) {
-    try {
-      const db = getFirestoreDb();
-      let query: any = db.collection(collectionName);
-      if (sortField) {
-        query = query.orderBy(sortField, sortDirection);
-      }
-      const snapshot = await query.get();
-      const items: any[] = [];
-      snapshot.forEach((doc: any) => {
-        const data = doc.data();
-        items.push({ id: doc.id, ...data });
-        // Update local memory collection in background
-        if (!memoryCollections[collectionName]) {
-          memoryCollections[collectionName] = {};
-        }
-        memoryCollections[collectionName][doc.id] = { id: doc.id, ...data };
-      });
-      collectionCache[collectionName] = { items, timestamp: now };
-      return items;
-    } catch (err: any) {
-      console.warn(
-        `[FIREBASE FETCH] Firestore fetch failed for ${collectionName}, falling back to memory:`,
-        err.message
-      );
-    }
-  }
-
-  // Fallback to in-memory state
+  // Load from in-memory state
   const items = Object.values(memoryCollections[collectionName] || {});
   if (sortField) {
     items.sort((a: any, b: any) => {
@@ -362,26 +203,6 @@ async function getDocById(
   const safeId = String(docId).trim();
   if (!safeId) return null;
 
-  if (isFirebaseAvailable) {
-    try {
-      const db = getFirestoreDb();
-      const docSnap = await db.collection(collectionName).doc(safeId).get();
-      if (docSnap.exists) {
-        const data = { id: docSnap.id, ...docSnap.data() };
-        if (!memoryCollections[collectionName]) {
-          memoryCollections[collectionName] = {};
-        }
-        memoryCollections[collectionName][safeId] = data;
-        return data;
-      }
-    } catch (err: any) {
-      console.warn(
-        `[FIREBASE GET] Error getting doc ${safeId} from ${collectionName}:`,
-        err.message
-      );
-    }
-  }
-
   if (
     memoryCollections[collectionName] &&
     memoryCollections[collectionName][safeId]
@@ -403,7 +224,7 @@ async function saveDoc(
 
   const payload = { id: safeId, ...data };
 
-  // 1. Update in-memory
+  // Update in-memory
   if (!memoryCollections[collectionName]) {
     memoryCollections[collectionName] = {};
   }
@@ -413,22 +234,6 @@ async function saveDoc(
 
   savePersistentDb();
   delete collectionCache[collectionName];
-
-  // 2. Persist to Firestore
-  if (isFirebaseAvailable) {
-    try {
-      const db = getFirestoreDb();
-      await db
-        .collection(collectionName)
-        .doc(safeId)
-        .set(payload, { merge });
-    } catch (err: any) {
-      console.warn(
-        `[FIREBASE SAVE] Error saving doc ${safeId} to ${collectionName}:`,
-        err.message
-      );
-    }
-  }
 }
 
 async function deleteDocById(
@@ -438,7 +243,7 @@ async function deleteDocById(
   const safeId = String(docId).trim();
   if (!safeId) return;
 
-  // 1. Remove from in-memory
+  // Remove from in-memory
   if (
     memoryCollections[collectionName] &&
     memoryCollections[collectionName][safeId]
@@ -447,19 +252,6 @@ async function deleteDocById(
     savePersistentDb();
   }
   delete collectionCache[collectionName];
-
-  // 2. Remove from Firestore
-  if (isFirebaseAvailable) {
-    try {
-      const db = getFirestoreDb();
-      await db.collection(collectionName).doc(safeId).delete();
-    } catch (err: any) {
-      console.warn(
-        `[FIREBASE DELETE] Error deleting doc ${safeId} from ${collectionName}:`,
-        err.message
-      );
-    }
-  }
 }
 
 // =========================================================================
@@ -488,29 +280,6 @@ function getAdminCredentials() {
     };
   }
   return memoryCollections.settings["admin_credentials"];
-}
-
-// Initialize Supabase Client securely on the backend (optional helper)
-const SUPABASE_URL = process.env.SUPABASE_URL || "";
-const SUPABASE_SERVICE_ROLE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "";
-
-let supabase: any = null;
-if (
-  SUPABASE_URL &&
-  (SUPABASE_URL.startsWith("http://") || SUPABASE_URL.startsWith("https://")) &&
-  SUPABASE_SERVICE_ROLE_KEY
-) {
-  try {
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-  } catch (err) {
-    console.warn("[SUPABASE] Optional client initialization note:", err);
-  }
 }
 
 // =========================================================================
@@ -817,7 +586,7 @@ app.post(["/api/login.php", "/api/login"], async (req, res) => {
       });
     }
 
-    // 2. Check Team Member Credentials in Firestore
+    // 2. Check Team Member Credentials
     const teamMembers = await getCollectionDocs("team");
     const matchedMember = teamMembers.find((m: any) => {
       const u = String(m.username || "").trim().toLowerCase();
@@ -1877,42 +1646,13 @@ app.all("/api/web_responses.php", async (req, res) => {
 });
 
 // =========================================================================
-// RESET CRM DATA PERMANENTLY (FIRESTORE PURGE)
+// RESET CRM DATA PERMANENTLY
 // =========================================================================
-
-async function clearFirestoreCollection(collectionName: string) {
-  if (!isFirebaseAvailable) return 0;
-  try {
-    const db = getFirestoreDb();
-    const snapshot = await db.collection(collectionName).get();
-    if (snapshot.empty) return 0;
-
-    const batch = db.batch();
-    let count = 0;
-    snapshot.docs.forEach((doc: any) => {
-      batch.delete(doc.ref);
-      count++;
-    });
-    if (count > 0) {
-      await batch.commit();
-    }
-    console.log(
-      `[FIREBASE WIPE] Purged ${count} records from Firestore collection: ${collectionName}`
-    );
-    return count;
-  } catch (err: any) {
-    console.warn(
-      `[FIREBASE WIPE WARNING] Could not purge collection ${collectionName}:`,
-      err.message
-    );
-    return 0;
-  }
-}
 
 const handleResetAllCrmData = async (req: express.Request, res: express.Response) => {
   console.log("=== RESET ALL CRM DATA INITIATED ===");
   try {
-    const firestoreCollectionsToPurge = [
+    const collectionsToPurge = [
       "leads",
       "clients",
       "calls",
@@ -1935,8 +1675,7 @@ const handleResetAllCrmData = async (req: express.Request, res: express.Response
       "portalPresence",
     ];
 
-    for (const col of firestoreCollectionsToPurge) {
-      await clearFirestoreCollection(col);
+    for (const col of collectionsToPurge) {
       if (memoryCollections[col]) {
         memoryCollections[col] = {};
       }
@@ -1952,7 +1691,7 @@ const handleResetAllCrmData = async (req: express.Request, res: express.Response
     console.log("=== RESET ALL CRM DATA COMPLETED SUCCESSFULLY ===");
     return res.json({
       success: true,
-      message: "All CRM data has been permanently deleted from Firestore.",
+      message: "All CRM data has been permanently deleted.",
     });
   } catch (error: any) {
     console.error("=== RESET ALL CRM DATA ERROR ===", error);
@@ -1967,15 +1706,13 @@ app.post("/api/reset.php", handleResetAllCrmData);
 app.post("/api/reset", handleResetAllCrmData);
 
 // =========================================================================
-// SUPABASE / FIRESTORE GENERIC COLLECTION SYNC API
+// COLLECTION SYNC API
 // =========================================================================
 
 app.get("/api/supabase/health", async (req, res) => {
   return res.json({
     status: "ok",
-    supabaseOnline: false,
-    firebaseOnline: isFirebaseAvailable,
-    firebaseError: firebaseError,
+    database: "in-memory-disk",
     timestamp: new Date().toISOString(),
   });
 });
@@ -2115,38 +1852,6 @@ async function findPortalBySecureToken(
   const collectionName = type === "client" ? "clientPortals" : "teamPortals";
   const rawToken = (secureToken || "").trim();
   if (!rawToken) return null;
-
-  if (isFirebaseAvailable) {
-    try {
-      const db = getFirestoreDb();
-      const snapshot = await db
-        .collection(collectionName)
-        .where("secureToken", "==", rawToken)
-        .limit(1)
-        .get();
-
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
-      }
-
-      const docSnap = await db.collection(collectionName).doc(rawToken).get();
-      if (docSnap.exists) {
-        return { id: docSnap.id, ...docSnap.data() };
-      }
-
-      const portalIdSnap = await db
-        .collection(collectionName)
-        .where("portalId", "==", rawToken)
-        .limit(1)
-        .get();
-
-      if (!portalIdSnap.empty) {
-        const doc = portalIdSnap.docs[0];
-        return { id: doc.id, ...doc.data() };
-      }
-    } catch (err) {}
-  }
 
   const memItems = Object.values(memoryCollections[collectionName] || {});
   const foundMem = memItems.find(
@@ -2871,7 +2576,7 @@ app.get("/api/portal/presence", async (req, res) => {
 });
 
 // =========================================================================
-// STORAGE UPLOAD & DOWNLOAD (FIREBASE STORAGE / SERVER FALLBACK)
+// STORAGE UPLOAD & DOWNLOAD (LOCAL SERVER STORAGE)
 // =========================================================================
 
 const STORAGE_DIR = path.join(process.cwd(), "storage_uploads");
@@ -2899,55 +2604,17 @@ app.post(
       const fileName = `${Date.now()}-${safeOriginalName}`;
       const destination = `${folderPath}/${fileName}`;
 
-      let uploadedToFirebase = false;
-      let fileUrl = "";
-
-      if ((admin as any).apps?.length) {
-        try {
-          const bucket = getStorage().bucket();
-          const file = bucket.file(destination);
-          await file.save(req.file.buffer, {
-            metadata: {
-              contentType: req.file.mimetype,
-              metadata: {
-                originalName: req.file.originalname,
-                uploadedAt: new Date().toISOString(),
-              },
-            },
-            resumable: false,
-          });
-
-          try {
-            const [signedUrl] = await file.getSignedUrl({
-              action: "read",
-              expires: "03-09-2491",
-            });
-            fileUrl = signedUrl;
-            uploadedToFirebase = true;
-          } catch (signErr) {
-            fileUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
-            uploadedToFirebase = true;
-          }
-        } catch (fbErr: any) {
-          console.warn("[STORAGE] Firebase bucket note:", fbErr.message);
-        }
-      }
-
       // Save to local storage_uploads directory
-      try {
-        const localTargetDir = path.join(STORAGE_DIR, folderPath);
-        if (!fs.existsSync(localTargetDir)) {
-          fs.mkdirSync(localTargetDir, { recursive: true });
-        }
-        const localFilePath = path.join(STORAGE_DIR, destination);
-        fs.writeFileSync(localFilePath, req.file.buffer);
-      } catch (localErr) {}
-
-      if (!uploadedToFirebase || !fileUrl) {
-        fileUrl = `/api/storage/file?path=${encodeURIComponent(
-          destination
-        )}&filename=${encodeURIComponent(req.file.originalname)}`;
+      const localTargetDir = path.join(STORAGE_DIR, folderPath);
+      if (!fs.existsSync(localTargetDir)) {
+        fs.mkdirSync(localTargetDir, { recursive: true });
       }
+      const localFilePath = path.join(STORAGE_DIR, destination);
+      fs.writeFileSync(localFilePath, req.file.buffer);
+
+      const fileUrl = `/api/storage/file?path=${encodeURIComponent(
+        destination
+      )}&filename=${encodeURIComponent(req.file.originalname)}`;
 
       return res.json({
         success: true,
@@ -3039,34 +2706,6 @@ app.get(
         return stream.pipe(res);
       }
 
-      // Try Firebase Storage
-      if ((admin as any).apps?.length) {
-        try {
-          const bucket = getStorage().bucket();
-          const file = bucket.file(normalized);
-          const [exists] = await file.exists();
-          if (exists) {
-            const [metadata] = await file.getMetadata();
-            res.setHeader(
-              "Content-Type",
-              metadata.contentType || "application/octet-stream"
-            );
-            if (metadata.size) {
-              res.setHeader("Content-Length", metadata.size);
-            }
-            if (isDownload) {
-              res.setHeader(
-                "Content-Disposition",
-                `attachment; filename="${encodeURIComponent(
-                  requestedFileName
-                )}"`
-              );
-            }
-            return file.createReadStream().pipe(res);
-          }
-        } catch (fbErr) {}
-      }
-
       return res.status(404).send("File not found.");
     } catch (err: any) {
       return res.status(500).send("Internal server error.");
@@ -3094,12 +2733,6 @@ app.post(
         if (fs.existsSync(localFilePath)) {
           try {
             fs.unlinkSync(localFilePath);
-          } catch (e) {}
-        }
-        if ((admin as any).apps?.length) {
-          try {
-            const bucket = getStorage().bucket();
-            await bucket.file(normalized).delete().catch(() => {});
           } catch (e) {}
         }
       }

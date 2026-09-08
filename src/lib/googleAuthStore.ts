@@ -1,6 +1,3 @@
-import { auth } from './googleChatService';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-
 interface TokenEntry {
   accessToken: string;
   user: any;
@@ -35,7 +32,7 @@ export async function verifyGoogleToken(integrationId: string, accessToken: stri
 
   try {
     const response = await fetch(probeUrl, {
-      method: probeUrl.includes('tokeninfo') ? 'GET' : 'GET',
+      method: 'GET',
       headers: probeUrl.includes('tokeninfo') ? {} : {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
@@ -84,51 +81,4 @@ export function setIntegrationToken(integrationId: string, accessToken: string, 
  */
 export function clearIntegrationToken(integrationId: string): void {
   tokenStore.delete(integrationId);
-}
-
-/**
- * Connects a Google OAuth integration using Firebase Auth signInWithPopup
- * and verifies the acquired token against Google APIs.
- */
-export async function connectGoogleOAuthIntegration(
-  integrationId: string,
-  scopes: string[]
-): Promise<{ success: boolean; accessToken?: string; error?: string }> {
-  try {
-    const provider = new GoogleAuthProvider();
-    scopes.forEach(scope => provider.addScope(scope));
-
-    // Force prompt account selection if needed
-    provider.setCustomParameters({
-      prompt: 'consent',
-      access_type: 'online'
-    });
-
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    const token = credential?.accessToken;
-
-    if (!token) {
-      return { success: false, error: 'OAuth popup completed but no access token was returned.' };
-    }
-
-    // Live probe test token against Google API
-    const verification = await verifyGoogleToken(integrationId, token);
-    if (!verification.valid) {
-      return { 
-        success: false, 
-        error: `Token acquired but Google API verification failed: ${verification.error || 'Access denied or API not enabled.'}` 
-      };
-    }
-
-    // Save token in memory
-    setIntegrationToken(integrationId, token, result.user);
-    return { success: true, accessToken: token };
-  } catch (error: any) {
-    console.error(`[Google Integration] OAuth Error for ${integrationId}:`, error);
-    if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
-      return { success: false, error: 'Connection cancelled: Google authentication popup was closed.' };
-    }
-    return { success: false, error: error?.message || 'Google OAuth connection failed.' };
-  }
 }

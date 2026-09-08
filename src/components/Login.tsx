@@ -35,11 +35,9 @@ import {
 } from 'lucide-react';
 import zyqitekLogoImg from '../assets/images/zyqitek_logo_1784722857265.jpg';
 import { EnterpriseBackgroundAnimation } from './EnterpriseBackgroundAnimation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '../lib/firebaseClient';
 
 interface LoginProps {
-  onLogin: (token?: string, csrfToken?: string, role?: string, skipBrandedLoading?: boolean, firebaseToken?: string) => void;
+  onLogin: (token?: string, csrfToken?: string, role?: string, skipBrandedLoading?: boolean) => void;
 }
 
 interface EnterpriseLockoutCardProps {
@@ -243,7 +241,7 @@ export default function Login({ onLogin }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [loadingStatusText, setLoadingStatusText] = useState('Initializing Workspace...');
-  const [loginResultData, setLoginResultData] = useState<{ token?: string; csrfToken?: string; role?: string; firebaseToken?: string }>({});
+  const [loginResultData, setLoginResultData] = useState<{ token?: string; csrfToken?: string; role?: string }>({});
 
   // Close login modal on ESC key press
   useEffect(() => {
@@ -271,7 +269,7 @@ export default function Login({ onLogin }: LoginProps) {
     }, 1800);
 
     const t3 = setTimeout(() => {
-      onLogin(loginResultData.token, loginResultData.csrfToken, loginResultData.role, true, loginResultData.firebaseToken);
+      onLogin(loginResultData.token, loginResultData.csrfToken, loginResultData.role, true);
     }, 2700);
 
     return () => {
@@ -430,32 +428,7 @@ export default function Login({ onLogin }: LoginProps) {
 
     setIsLoading(true);
 
-    // 1. If username is an email address and Firebase is configured, attempt Firebase Authentication
-    if (cleanUser.includes('@') && isFirebaseConfigured) {
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, cleanUser, cleanPass);
-        const token = await userCredential.user.getIdToken();
-        setIsLoading(false);
-        setLoginResultData({
-          token: token,
-          csrfToken: token.slice(0, 32),
-          role: 'Admin',
-          firebaseToken: token
-        });
-        setLoginSuccess(true);
-        return;
-      } catch (fbErr: any) {
-        console.error('[FIREBASE AUTH ERROR]', fbErr);
-        setIsLoading(false);
-        const errorCode = fbErr?.code || 'auth/unknown';
-        const errorMsg = fbErr?.message || 'Firebase Authentication failed.';
-        // Logically expose the exact Firebase auth error as requested
-        setError(`Firebase Authentication error (${errorCode}): ${errorMsg}`);
-        return;
-      }
-    }
-
-    // 2. Primary verification via CRM credentials endpoint (/api/login.php with fallback to /api/login)
+    // Primary verification via CRM credentials endpoint (/api/login.php with fallback to /api/login)
     try {
       let response: Response | null = null;
       try {
@@ -523,8 +496,7 @@ export default function Login({ onLogin }: LoginProps) {
         setLoginResultData({
           token: data.token,
           csrfToken: data.csrf_token,
-          role: data.role,
-          firebaseToken: data.firebaseToken
+          role: data.role
         });
         setLoginSuccess(true);
         return;
@@ -599,8 +571,7 @@ export default function Login({ onLogin }: LoginProps) {
         setLoginResultData({
           token: data.token,
           csrfToken: data.csrfToken || data.csrf_token,
-          role: data.role,
-          firebaseToken: data.firebaseToken
+          role: data.role
         });
         setLoginSuccess(true);
       } else {
