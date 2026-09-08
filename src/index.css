@@ -220,8 +220,12 @@ html, body, #root, main, aside, header, nav, section, article {
 .animate-spin-once,
 .animate-pulse,
 .animate-bounce,
+.animate-shake,
+.animate-fadeIn,
 .no-transition,
-.no-transition * {
+.no-transition *,
+[data-framer-motion],
+[data-projection-id] {
   transition: none !important;
 }
 
@@ -318,6 +322,46 @@ html, body, #root, main, aside, header, nav, section, article {
   }
 }
 
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-6px);
+  }
+  40%, 80% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes fadeIn50 {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomOut95 {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .animate-in {
   animation-duration: 250ms;
   animation-fill-mode: both;
@@ -328,12 +372,20 @@ html, body, #root, main, aside, header, nav, section, article {
   animation-name: fadeIn;
 }
 
+.fade-in-50 {
+  animation-name: fadeIn50;
+}
+
 .zoom-in {
   animation-name: zoomIn;
 }
 
 .zoom-in-95 {
   animation-name: zoomIn95;
+}
+
+.zoom-out-95 {
+  animation-name: zoomOut95;
 }
 
 .slide-in-from-top-2 {

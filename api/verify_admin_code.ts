@@ -1,3 +1,13 @@
+// Helper to normalize environment variables and strip surrounding quotes/whitespace/newlines
+const normalizeSecret = (val: any): string | null => {
+  if (!val || typeof val !== 'string') return null;
+  let s = val.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s || null;
+};
+
 // Vercel Serverless Function: /api/verify_admin_code (handles both /api/verify_admin_code and rewritten /api/verify_admin_code.php)
 export default async function handler(req: any, res: any) {
   const reqOrigin = req.headers?.origin;
@@ -13,7 +23,14 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const body = req.body || {};
+    let body = req.body || {};
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        body = {};
+      }
+    }
     const query = req.query || {};
 
     const checkOnly = body.checkOnly !== undefined ? body.checkOnly : (query.checkOnly !== undefined ? query.checkOnly : false);
@@ -27,9 +44,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const code = (body.code || body.admin_code || body.adminCode || query.code || "").trim();
-    const expectedCode = process.env.ADMIN_VERIFICATION_CODE || process.env.ADMIN_CODE || process.env.CRM_ADMIN_CODE || "AdminA9";
+    const candidateCodes = [
+      normalizeSecret(process.env.ADMIN_VERIFICATION_CODE),
+      normalizeSecret(process.env.ADMIN_CODE),
+      normalizeSecret(process.env.CRM_ADMIN_CODE),
+      "AdminA9"
+    ].filter(Boolean) as string[];
 
-    const isMatch = code === expectedCode || code === "AdminA9";
+    const isMatch = Boolean(
+      code &&
+      candidateCodes.some(c => code === c)
+    );
 
     if (code && isMatch) {
       const token = "admin-tok-" + Math.random().toString(36).substring(2) + Date.now().toString(36);

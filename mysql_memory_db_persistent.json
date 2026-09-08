@@ -142,6 +142,16 @@
       "admin_failed_attempts": 0,
       "admin_lock_until": null,
       "admin_lock_level": 0
+    },
+    {
+      "ip_address": "202.59.12.177",
+      "failed_attempts": 0,
+      "lock_level": 0,
+      "last_failed_login": null,
+      "lock_until": null,
+      "admin_failed_attempts": 0,
+      "admin_lock_until": null,
+      "admin_lock_level": 0
     }
   ],
   "audit_logs": [],
@@ -460,13 +470,13 @@
   "user_sessions": [
     {
       "id": "user-1",
-      "token": "token-9gwxwkvt2h4yt07a8oxn8",
+      "token": "token-edc8yeimai410btv9pe8y",
       "username": "Zyqro87",
       "role": "Admin",
-      "csrfToken": "csrf-fr6itgz60s5",
-      "createdAt": "2026-09-04T04:05:57.275Z",
-      "expiresAt": "2026-09-05T04:05:57.275Z",
-      "lastActive": "1788495006"
+      "csrfToken": "csrf-jgq7gn3b0c",
+      "createdAt": "2026-09-08T03:30:44.081Z",
+      "expiresAt": "2026-09-09T03:30:44.080Z",
+      "lastActive": "1788838370"
     }
   ],
   "settings": [
@@ -559,6 +569,16 @@
     },
     {
       "ip_address": "202.59.13.77",
+      "failed_attempts": 0,
+      "lock_until": null
+    },
+    {
+      "ip_address": "202.59.12.85",
+      "failed_attempts": 0,
+      "lock_until": null
+    },
+    {
+      "ip_address": "202.59.12.177",
       "failed_attempts": 0,
       "lock_until": null
     }

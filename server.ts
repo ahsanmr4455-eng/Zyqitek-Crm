@@ -16,7 +16,7 @@ import multer from "multer";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Configure Multer for memory storage
 const upload = multer({
@@ -61,8 +61,10 @@ try {
     }
     console.log("[PORTAL BACKEND] Firebase Admin initialized with environment variables.");
   } else {
-    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
-    if (fs.existsSync(configPath)) {
+    const rootConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
+    const srcConfigPath = path.join(process.cwd(), "src/lib/firebase-applet-config.json");
+    const configPath = fs.existsSync(rootConfigPath) ? rootConfigPath : (fs.existsSync(srcConfigPath) ? srcConfigPath : null);
+    if (configPath && fs.existsSync(configPath)) {
       const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
       const pId = firebaseConfig.projectId;
       const dbId = firebaseConfig.firestoreDatabaseId;

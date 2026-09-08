@@ -198,21 +198,25 @@ export default function LoginBackground3D() {
 
       {/* 2. Soft Ambient Glow directly aligned over the large Zyqitek "Z" Logo in the image */}
       {!isMobile ? (
-        <motion.div
-          animate={{
-            scale: [1, 1.12, 1],
-            opacity: [0.35, 0.65, 0.35],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          className="absolute top-[28%] right-[15%] w-[380px] h-[380px] bg-lime-400/25 rounded-full blur-[110px] pointer-events-none"
+        <div
+          className="absolute top-[28%] right-[15%] w-[380px] h-[380px] pointer-events-none"
           style={{
             transform: `translate3d(${parallaxX * 0.8}px, ${parallaxY * 0.8}px, 0)`,
           }}
-        />
+        >
+          <motion.div
+            animate={{
+              scale: [1, 1.12, 1],
+              opacity: [0.35, 0.65, 0.35],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="w-full h-full bg-lime-400/25 rounded-full blur-[110px]"
+          />
+        </div>
       ) : (
         <div className="absolute top-[28%] right-[15%] w-[380px] h-[380px] bg-lime-400/15 rounded-full blur-[110px] pointer-events-none" />
       )}
@@ -251,67 +255,81 @@ export default function LoginBackground3D() {
 
       {/* 5. Floating Transparent Glass Cubes with 3D Rotation */}
       {!isMobile && (
-        <motion.div
-          animate={{
-            y: [-12, 12, -12],
-            rotateX: [0, 180, 360],
-            rotateY: [0, 360, 0],
-            rotateZ: [0, 90, 0],
-          }}
-          transition={{
-            duration: 16,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-          className="absolute top-[20%] left-[12%] w-16 h-16 rounded-xl border border-[var(--crm-card-border)] bg-[var(--crm-card)] dark:bg-[var(--crm-card)]/5 backdrop-blur-md shadow-[0_0_20px_rgba(163,230,53,0.15)] pointer-events-none"
+        <div
+          className="absolute top-[20%] left-[12%] w-16 h-16 pointer-events-none"
           style={{
             perspective: 1000,
-            transformStyle: 'preserve-3d',
             transform: `translate3d(${parallaxX * 1.5}px, ${parallaxY * 1.5}px, 0)`,
           }}
         >
-          <div className="absolute inset-0 rounded-xl border border-lime-400/30 bg-gradient-to-br from-lime-400/10 to-transparent" />
-        </motion.div>
+          <motion.div
+            animate={{
+              y: [-12, 12, -12],
+              rotateX: [0, 180, 360],
+              rotateY: [0, 360, 0],
+              rotateZ: [0, 90, 0],
+            }}
+            transition={{
+              duration: 16,
+              repeat: Infinity,
+              ease: 'linear',
+            }}
+            className="w-full h-full rounded-xl border border-[var(--crm-card-border)] bg-[var(--crm-card)] dark:bg-[var(--crm-card)]/5 backdrop-blur-md shadow-[0_0_20px_rgba(163,230,53,0.15)]"
+            style={{
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            <div className="absolute inset-0 rounded-xl border border-lime-400/30 bg-gradient-to-br from-lime-400/10 to-transparent" />
+          </motion.div>
+        </div>
       )}
 
       {!isMobile && (
-        <motion.div
-          animate={{
-            y: [10, -15, 10],
-            rotateX: [360, 0, 360],
-            rotateY: [0, -180, 0],
-          }}
-          transition={{
-            duration: 22,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          className="absolute bottom-[22%] left-[38%] w-12 h-12 rounded-lg border border-lime-400/25 bg-lime-400/5 backdrop-blur-sm shadow-[0_0_15px_rgba(163,230,53,0.2)] pointer-events-none"
+        <div
+          className="absolute bottom-[22%] left-[38%] w-12 h-12 pointer-events-none"
           style={{
             transform: `translate3d(${parallaxX * 1.2}px, ${parallaxY * 1.2}px, 0)`,
           }}
-        />
+        >
+          <motion.div
+            animate={{
+              y: [10, -15, 10],
+              rotateX: [360, 0, 360],
+              rotateY: [0, -180, 0],
+            }}
+            transition={{
+              duration: 22,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="w-full h-full rounded-lg border border-lime-400/25 bg-lime-400/5 backdrop-blur-sm shadow-[0_0_15px_rgba(163,230,53,0.2)]"
+          />
+        </div>
       )}
 
       {/* 6. Holographic Geometric Wireframes */}
       {!isMobile && (
-        <motion.div
-          animate={{
-            rotate: 360,
-            scale: [0.95, 1.05, 0.95],
-          }}
-          transition={{
-            rotate: { duration: 25, repeat: Infinity, ease: 'linear' },
-            scale: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
-          }}
-          className="absolute top-[62%] right-[8%] w-24 h-24 border border-lime-400/30 rounded-full flex items-center justify-center pointer-events-none hidden lg:flex"
+        <div
+          className="absolute top-[62%] right-[8%] w-24 h-24 pointer-events-none hidden lg:block"
           style={{
             transform: `translate3d(${parallaxX * 1.4}px, ${parallaxY * 1.4}px, 0)`,
           }}
         >
-          <div className="w-16 h-16 border border-emerald-400/20 rotate-45" />
-          <div className="w-8 h-8 rounded-full bg-lime-400/20 blur-xs" />
-        </motion.div>
+          <motion.div
+            animate={{
+              rotate: 360,
+              scale: [0.95, 1.05, 0.95],
+            }}
+            transition={{
+              rotate: { duration: 25, repeat: Infinity, ease: 'linear' },
+              scale: { duration: 6, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="w-full h-full border border-lime-400/30 rounded-full flex items-center justify-center"
+          >
+            <div className="w-16 h-16 border border-emerald-400/20 rotate-45" />
+            <div className="w-8 h-8 rounded-full bg-lime-400/20 blur-xs" />
+          </motion.div>
+        </div>
       )}
 
       {/* 7. Light Sweep Effect over the ground/background seam */}
