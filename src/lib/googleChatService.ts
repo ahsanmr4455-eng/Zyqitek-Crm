@@ -1,9 +1,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import firebaseConfig from './firebase-applet-config.json';
+import firebaseConfigJson from '../../firebase-applet-config.json';
+
+const getFirebaseConfig = () => {
+  return {
+    apiKey: firebaseConfigJson?.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSy_placeholder_key",
+    authDomain: firebaseConfigJson?.authDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "applet-placeholder.firebaseapp.com",
+    projectId: firebaseConfigJson?.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "applet-placeholder",
+    storageBucket: firebaseConfigJson?.storageBucket || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "applet-placeholder.appspot.com",
+    messagingSenderId: firebaseConfigJson?.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
+    appId: firebaseConfigJson?.appId || import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:1234567890"
+  };
+};
 
 // Reuse initialized Firebase app if present
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const app = getApps().length > 0 ? getApp() : initializeApp(getFirebaseConfig());
 export const auth = getAuth(app);
 
 // Provider with requested Google Chat scopes

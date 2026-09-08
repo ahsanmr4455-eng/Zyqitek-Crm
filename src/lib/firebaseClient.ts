@@ -16,7 +16,21 @@ import {
   serverTimestamp,
   FirestoreError
 } from 'firebase/firestore';
-import firebaseConfig from './firebase-applet-config.json';
+import firebaseConfigJson from '../../firebase-applet-config.json';
+
+const getFirebaseConfig = () => {
+  return {
+    apiKey: firebaseConfigJson?.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSy_placeholder_key",
+    authDomain: firebaseConfigJson?.authDomain || import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "applet-placeholder.firebaseapp.com",
+    projectId: firebaseConfigJson?.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "applet-placeholder",
+    storageBucket: firebaseConfigJson?.storageBucket || import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "applet-placeholder.appspot.com",
+    messagingSenderId: firebaseConfigJson?.messagingSenderId || import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
+    appId: firebaseConfigJson?.appId || import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:1234567890",
+    firestoreDatabaseId: firebaseConfigJson?.firestoreDatabaseId || import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "(default)"
+  };
+};
+
+const firebaseConfig = getFirebaseConfig();
 
 // Initialize Firebase App
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
