@@ -63,20 +63,31 @@ export function parsePortalRoute(pathInput?: string): PortalRouteInfo | null {
  * Generates the secure, non-predictable URL for a Client or Team Portal.
  */
 export function generatePortalLink(type: 'client' | 'team', portalId: string, secureToken?: string): { primaryUrl: string; cleanPathUrl: string } {
-  const envDomain = typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_DOMAIN 
-    ? (import.meta.env.VITE_APP_DOMAIN.startsWith('http') ? import.meta.env.VITE_APP_DOMAIN : `https://${import.meta.env.VITE_APP_DOMAIN}`)
-    : '';
+  let origin = '';
 
-  const origin = (typeof window !== 'undefined' && window.location && window.location.origin)
-    ? window.location.origin
-    : envDomain;
+  // 1. Check for configured VITE_PORTAL_APP_URL (standalone Portal domain) or VITE_PUBLIC_APP_URL
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (import.meta.env.VITE_PORTAL_APP_URL) {
+      origin = String(import.meta.env.VITE_PORTAL_APP_URL).trim().replace(/\/+$/, '');
+    } else if (import.meta.env.VITE_PUBLIC_APP_URL) {
+      origin = String(import.meta.env.VITE_PUBLIC_APP_URL).trim().replace(/\/+$/, '');
+    }
+  }
+
+  if (!origin) {
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      origin = window.location.origin;
+    } else {
+      origin = 'https://zyqitekportal.ai.studio';
+    }
+  }
 
   // MUST use secureToken for link generation to prevent enumeration.
   // If no secure token is provided (legacy), we use the portalId, but ideally it should always exist.
   const token = secureToken || portalId;
   const typeChar = type === 'client' ? 'c' : 't';
 
-  const cleanPathUrl = origin ? `${origin}/p/${typeChar}/${token}` : `/p/${typeChar}/${token}`;
+  const cleanPathUrl = `${origin}/p/${typeChar}/${token}`;
 
   return { primaryUrl: cleanPathUrl, cleanPathUrl };
 }

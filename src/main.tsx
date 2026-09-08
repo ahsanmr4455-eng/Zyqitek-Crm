@@ -4,6 +4,34 @@ import App from './App.tsx';
 import './index.css';
 import { ConnectionManager } from './lib/connection';
 
+// Global fetch interceptor to support remote API routing when deployed on a static frontend platform (like Cloudflare Pages)
+const originalFetch = window.fetch;
+window.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
+  let url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  
+  if (url.startsWith('/api/')) {
+    let backendUrl = '';
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      if (import.meta.env.VITE_PUBLIC_APP_URL) {
+        backendUrl = String(import.meta.env.VITE_PUBLIC_APP_URL).trim().replace(/\/+$/, '');
+      } else if (import.meta.env.VITE_PORTAL_APP_URL) {
+        backendUrl = String(import.meta.env.VITE_PORTAL_APP_URL).trim().replace(/\/+$/, '');
+      }
+    }
+    
+    if (backendUrl) {
+      const targetUrl = `${backendUrl}${url}`;
+      if (input instanceof Request) {
+        const newRequest = new Request(targetUrl, input);
+        return originalFetch(newRequest, init);
+      }
+      return originalFetch(targetUrl, init);
+    }
+  }
+  
+  return originalFetch(input, init);
+};
+
 interface ErrorBoundaryProps {
   children: ReactNode;
 }

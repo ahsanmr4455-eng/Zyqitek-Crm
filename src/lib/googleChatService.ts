@@ -1,6 +1,32 @@
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import firebaseConfig from './firebase-applet-config.json';
+
+// Reuse initialized Firebase app if present
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+// Provider with requested Google Chat scopes
+const chatProvider = new GoogleAuthProvider();
+chatProvider.addScope('https://www.googleapis.com/auth/chat.spaces');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.spaces.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.spaces.create');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages.create');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages.reactions');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages.reactions.create');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.messages.reactions.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.memberships');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.memberships.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.customemojis.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.users.readstate');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.users.readstate.readonly');
+chatProvider.addScope('https://www.googleapis.com/auth/chat.users.spacesettings');
+
 // In-memory access token cache (Strictly in-memory, NOT in localStorage / sessionStorage)
 let cachedAccessToken: string | null = null;
-let currentUser: any = null;
+let isSigningIn = false;
 
 export interface GoogleChatSpace {
   name: string; // e.g. "spaces/AAAAAAAAAAA"
@@ -48,36 +74,43 @@ export interface GoogleChatMember {
  * Initialize Auth State listener for Google Workspace
  */
 export const initChatAuth = (
-  onAuthSuccess?: (user: any, token: string) => void,
+  onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  if (cachedAccessToken && currentUser) {
-    if (onAuthSuccess) onAuthSuccess(currentUser, cachedAccessToken);
-  } else {
-    if (onAuthFailure) onAuthFailure();
-  }
-  return () => {};
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      if (cachedAccessToken) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else if (!isSigningIn) {
+        // Token must be refreshed or acquired through explicit user interaction
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
 };
 
 /**
  * Sign in with Google to obtain Google Chat Access Token
  */
-export const signInWithGoogleChat = async (): Promise<{ user: any; accessToken: string } | null> => {
+export const signInWithGoogleChat = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
-    // In-memory token acquisition
-    if (cachedAccessToken) {
-      return { user: currentUser || { displayName: 'Zyqitek User' }, accessToken: cachedAccessToken };
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, chatProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Failed to obtain Google Chat access token from OAuth credential');
     }
-    return null;
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Google Chat Sign In Error:', error);
     throw error;
+  } finally {
+    isSigningIn = false;
   }
-};
-
-export const setChatAccessToken = (token: string | null, user?: any): void => {
-  cachedAccessToken = token;
-  currentUser = user || null;
 };
 
 export const getChatAccessToken = (): string | null => {
@@ -85,8 +118,8 @@ export const getChatAccessToken = (): string | null => {
 };
 
 export const signOutChat = async (): Promise<void> => {
+  await signOut(auth);
   cachedAccessToken = null;
-  currentUser = null;
 };
 
 /**
@@ -149,6 +182,7 @@ export const listGoogleChatMessages = async (spaceName: string): Promise<GoogleC
     throw new Error('No Google Chat access token available. Please sign in with Google.');
   }
 
+  // Format: spaces/{spaceId}
   const cleanSpace = spaceName.startsWith('spaces/') ? spaceName : `spaces/${spaceName}`;
   const response = await fetch(`https://chat.googleapis.com/v1/${cleanSpace}/messages?pageSize=50`, {
     headers: {
@@ -220,7 +254,7 @@ export const listGoogleChatMembers = async (spaceName: string): Promise<GoogleCh
 };
 
 /**
- * Delete a message from Google Chat
+ * Delete a message from Google Chat with destructive action requirement
  */
 export const deleteGoogleChatMessage = async (messageName: string): Promise<void> => {
   if (!cachedAccessToken) {

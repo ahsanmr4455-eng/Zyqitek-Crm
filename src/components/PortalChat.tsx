@@ -41,6 +41,19 @@ preloadedBg.src = chatDoodleBg;
 import { uploadPortalFile } from '../lib/fileStorage';
 import { useLongPress } from '../lib/useLongPress';
 import { PortalMessage, PortalPresence, TeamPortalAccount, ClientPortalAccount } from '../types';
+import { db } from '../lib/firebaseClient';
+import { 
+  collection, 
+  query, 
+  where,
+  or,
+  limit,
+  orderBy,
+  onSnapshot, 
+  doc, 
+  setDoc, 
+  updateDoc 
+} from 'firebase/firestore';
 import { getCollectionOnce } from '../lib/firebaseSync';
 
 interface PortalChatProps {
@@ -110,29 +123,56 @@ export default function PortalChat({
   const [extraTeamPortals, setExtraTeamPortals] = useState<TeamPortalAccount[]>([]);
   const [extraClientPortals, setExtraClientPortals] = useState<ClientPortalAccount[]>([]);
 
-  // Load portal accounts in Admin mode
+  // Load & realtime subscribe to portal accounts in Admin mode
   useEffect(() => {
     if (mode !== 'admin') return;
     let isMounted = true;
 
-    const loadPortals = () => {
-      Promise.all([
-        getCollectionOnce<TeamPortalAccount>('teamPortals').catch(() => []),
-        getCollectionOnce<ClientPortalAccount>('clientPortals').catch(() => [])
-      ]).then(([teams, clientsRes]) => {
-        if (isMounted) {
-          if (Array.isArray(teams)) setExtraTeamPortals(teams);
-          if (Array.isArray(clientsRes)) setExtraClientPortals(clientsRes);
-        }
-      });
-    };
+    // Realtime snapshot listeners
+    let unsubClientPortals: (() => void) | null = null;
+    let unsubTeamPortals: (() => void) | null = null;
 
-    loadPortals();
-    const interval = setInterval(loadPortals, 15000);
+    try {
+      unsubClientPortals = onSnapshot(collection(db, 'clientPortals'), (snapshot) => {
+        if (!isMounted) return;
+        const list: ClientPortalAccount[] = [];
+        snapshot.forEach(docSnap => {
+          list.push({ ...docSnap.data(), id: docSnap.id } as ClientPortalAccount);
+        });
+        setExtraClientPortals(list);
+      }, (err) => {
+        console.warn('clientPortals snapshot error:', err);
+      });
+
+      unsubTeamPortals = onSnapshot(collection(db, 'teamPortals'), (snapshot) => {
+        if (!isMounted) return;
+        const list: TeamPortalAccount[] = [];
+        snapshot.forEach(docSnap => {
+          list.push({ ...docSnap.data(), id: docSnap.id } as TeamPortalAccount);
+        });
+        setExtraTeamPortals(list);
+      }, (err) => {
+        console.warn('teamPortals snapshot error:', err);
+      });
+    } catch (e) {
+      console.warn('Portal accounts onSnapshot init error:', e);
+    }
+
+    // Initial load fallback
+    Promise.all([
+      getCollectionOnce<TeamPortalAccount>('teamPortals').catch(() => []),
+      getCollectionOnce<ClientPortalAccount>('clientPortals').catch(() => [])
+    ]).then(([teams, clientsRes]) => {
+      if (isMounted) {
+        if (Array.isArray(teams) && teams.length > 0) setExtraTeamPortals(teams);
+        if (Array.isArray(clientsRes) && clientsRes.length > 0) setExtraClientPortals(clientsRes);
+      }
+    });
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (unsubClientPortals) unsubClientPortals();
+      if (unsubTeamPortals) unsubTeamPortals();
     };
   }, [mode]);
 
@@ -274,11 +314,15 @@ export default function PortalChat({
           activeConv: selectedConversationId
         };
 
-        await fetch('/api/portal/presence', {
+        // Direct write to Firestore
+        await setDoc(doc(db, 'portalPresence', myId), presenceRecord, { merge: true });
+
+        // Backup REST API
+        fetch('/api/portal/presence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(presenceRecord)
-        });
+        }).catch(() => {});
 
         setConnectionStatus('connected');
       } catch (err) {
@@ -300,33 +344,24 @@ export default function PortalChat({
     };
   }, [mode, effectivePortalId, portalType, portalName, currentUserName, isTyping, selectedConversationId]);
 
-  // Presence Polling Listener
+  // Real-time Firestore Presence Listener
   useEffect(() => {
-    let isMounted = true;
-    const fetchPresences = async () => {
-      try {
-        const res = await fetch('/api/portal/presence');
-        const data = await res.json();
-        if (isMounted && data.success && Array.isArray(data.presence)) {
-          const map: Record<string, PortalPresence> = {};
-          data.presence.forEach((p: PortalPresence) => {
-            map[p.id] = p;
-          });
-          setPresences(map);
-          setConnectionStatus('connected');
-        }
-      } catch (err) {
-        console.warn('Presence fetch warning:', err);
-      }
-    };
-
-    fetchPresences();
-    const interval = setInterval(fetchPresences, 10000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    try {
+      const presenceRef = collection(db, 'portalPresence');
+      const unsubscribe = onSnapshot(presenceRef, (snapshot) => {
+        const map: Record<string, PortalPresence> = {};
+        snapshot.forEach((docSnap) => {
+          map[docSnap.id] = docSnap.data() as PortalPresence;
+        });
+        setPresences(map);
+        setConnectionStatus('connected');
+      }, (err) => {
+        console.warn('Presence snapshot warning:', err);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Presence listener failed:', err);
+    }
   }, []);
 
 
@@ -471,6 +506,14 @@ export default function PortalChat({
     const undelivered = currentMsgs.filter(m => isIncoming(m) && (!m.deliveredAt || m.status === 'sent') && m.id && !processedReceiptsRef.current.has(m.id + '_del'));
     if (undelivered.length > 0) {
       undelivered.forEach(m => processedReceiptsRef.current.add(m.id + '_del'));
+      for (const msg of undelivered) {
+        if (msg.id) {
+          updateDoc(doc(db, 'portalMessages', msg.id), {
+            deliveredAt: nowIso,
+            status: 'delivered'
+          }).catch(() => {});
+        }
+      }
       fetch('/api/portal/chat/deliver', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -485,6 +528,16 @@ export default function PortalChat({
     const unread = currentMsgs.filter(m => isIncoming(m) && (!m.readStatus || !m.readAt || m.status !== 'read') && m.id && !processedReceiptsRef.current.has(m.id + '_read'));
     if (unread.length > 0) {
       unread.forEach(m => processedReceiptsRef.current.add(m.id + '_read'));
+      for (const msg of unread) {
+        if (msg.id) {
+          updateDoc(doc(db, 'portalMessages', msg.id), {
+            readStatus: true,
+            readAt: nowIso,
+            status: 'read',
+            deliveredAt: msg.deliveredAt || nowIso
+          }).catch(() => {});
+        }
+      }
       fetch('/api/portal/chat/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -502,35 +555,47 @@ export default function PortalChat({
     processReceiptsRef.current = processReceipts;
   });
 
-  // Global messages polling in admin mode for sidebar previews & unread counter
+  // Independent Unread Messages Listener for Admin Sidebar
   useEffect(() => {
     if (mode !== 'admin') return;
-    let isMounted = true;
-
-    const fetchAllMessages = async () => {
-      try {
-        const res = await fetch('/api/portal/chat/messages');
-        const data = await res.json();
-        if (isMounted && data.success && Array.isArray(data.messages)) {
-          const list: PortalMessage[] = data.messages;
-          setAllMessagesList(list);
-          setUnreadMessages(list.filter(m => !m.readStatus && m.senderRole !== 'Admin'));
-        }
-      } catch (err) {
-        console.warn('Global messages poll error:', err);
-      }
-    };
-
-    fetchAllMessages();
-    const interval = setInterval(fetchAllMessages, 4000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    try {
+      const qUnread = query(collection(db, 'portalMessages'), where('readStatus', '==', false));
+      const unsubscribe = onSnapshot(qUnread, (snapshot) => {
+        setUnreadMessages(snapshot.docs.map(d => ({ ...d.data(), id: d.id } as PortalMessage)));
+      }, (err) => {
+        console.warn('Unread messages snapshot warning:', err);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Unread messages listener failed:', err);
+    }
   }, [mode]);
 
-  // Messages polling for active conversation
+  // Lightweight global latest messages listener (150 limit) in admin mode to supply sidebar previews instantly
+  useEffect(() => {
+    if (mode !== 'admin') return;
+    try {
+      const qLatest = query(
+        collection(db, 'portalMessages'),
+        orderBy('timestamp', 'desc'),
+        limit(150)
+      );
+      const unsubscribe = onSnapshot(qLatest, (snapshot) => {
+        const list: PortalMessage[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ ...docSnap.data(), id: docSnap.id } as PortalMessage);
+        });
+        setAllMessagesList(list);
+      }, (err) => {
+        console.warn('Latest global messages snapshot warning:', err);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.warn('Latest global messages listener failed:', err);
+    }
+  }, [mode]);
+
+  // Real-time Firestore Listener for active conversation with index fallback & pagination
   useEffect(() => {
     if (targetConvIds.length === 0 && targetPortalIds.length === 0) {
       setMessages([]);
@@ -538,36 +603,80 @@ export default function PortalChat({
       return;
     }
 
-    let isMounted = true;
-    const fetchActiveMessages = async () => {
-      const primaryConv = targetConvIds[0] || selectedConversationId;
-      const primaryPortal = targetPortalIds[0] || '';
-      try {
-        const url = primaryConv 
-          ? `/api/portal/chat/messages?conversationId=${encodeURIComponent(primaryConv)}`
-          : `/api/portal/chat/messages?portalId=${encodeURIComponent(primaryPortal)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (isMounted && data.success && Array.isArray(data.messages)) {
-          setMessages(data.messages);
-          setIsLoadingMessages(false);
-          setConnectionStatus('connected');
-          processReceiptsRef.current?.(data.messages);
-        }
-      } catch (err) {
-        console.warn('Active messages poll error:', err);
-      }
-    };
-
     setIsLoadingMessages(true);
-    fetchActiveMessages();
-    const interval = setInterval(fetchActiveMessages, 2500);
+    let unsubConv: () => void = () => {};
+
+    try {
+      const messagesRef = collection(db, 'portalMessages');
+
+      const handleSnapshot = (snapshot: any) => {
+        setMessages((prev: PortalMessage[]) => {
+          let updated = [...prev];
+          let hasChanges = false;
+          snapshot.docChanges().forEach((change: any) => {
+            hasChanges = true;
+            const changedData = { ...change.doc.data(), id: change.doc.id } as PortalMessage;
+            const existsIndex = updated.findIndex(m => m.id === changedData.id);
+            if (change.type === 'removed') {
+              updated = updated.filter(m => m.id !== changedData.id);
+            } else if (existsIndex >= 0) {
+              updated[existsIndex] = changedData;
+            } else {
+              updated.push(changedData);
+            }
+          });
+          if (hasChanges) {
+             return updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          }
+          return prev;
+        });
+        
+        setIsLoadingMessages(false);
+        setConnectionStatus('connected');
+
+        // Extract complete current snapshot messages for receipt processing
+        const currentBatch: PortalMessage[] = [];
+        snapshot.forEach((docSnap: any) => {
+          currentBatch.push({ ...docSnap.data(), id: docSnap.id } as PortalMessage);
+        });
+        processReceiptsRef.current?.(currentBatch);
+      };
+
+      const conditions = [];
+      if (targetConvIds.length > 0) {
+        conditions.push(where('conversationId', 'in', targetConvIds.slice(0, 5)));
+      }
+      if (targetPortalIds.length > 0) {
+        const portalIds = targetPortalIds.slice(0, 5);
+        conditions.push(where('portalId', 'in', portalIds));
+        conditions.push(where('receiverId', 'in', portalIds));
+        conditions.push(where('senderId', 'in', portalIds));
+      }
+
+      if (conditions.length > 0) {
+        // Try the optimized query with limit and sorting (requires composite index, falls back if missing)
+        const qMain = query(messagesRef, or(...conditions), orderBy('timestamp', 'desc'), limit(messageLimit));
+        
+        unsubConv = onSnapshot(qMain, handleSnapshot, (err) => {
+          console.warn('Optimized index-based query failed, falling back to full collection query:', err);
+          
+          // Fallback: Query without orderBy & limit, then sort/slice in memory inside useMemo
+          const qFallback = query(messagesRef, or(...conditions));
+          unsubConv = onSnapshot(qFallback, handleSnapshot, (fallbackErr) => {
+            console.error('Unified messages fallback snapshot error:', fallbackErr);
+            if (targetConvIds[0]) fetchMessagesRest(targetConvIds[0]);
+          });
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to attach conversation messages listener:', err);
+      if (targetConvIds[0]) fetchMessagesRest(targetConvIds[0]);
+    }
 
     return () => {
-      isMounted = false;
-      clearInterval(interval);
+      unsubConv();
     };
-  }, [mode, serializedConvIds, serializedPortalIds, selectedConversationId]);
+  }, [mode, serializedConvIds, serializedPortalIds, messageLimit, fetchMessagesRest]);
 
   // Derived real-time active conversation messages
   const displayMessages = useMemo(() => {
@@ -679,10 +788,8 @@ export default function PortalChat({
     setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isPinned: newPinned } : m));
     setAllMessagesList(prev => prev.map(m => m.id === msg.id ? { ...m, isPinned: newPinned } : m));
     try {
-      await fetch(`/api/supabase/collection/portalMessages/${encodeURIComponent(msg.id)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPinned: newPinned })
+      await updateDoc(doc(db, 'portalMessages', msg.id), {
+        isPinned: newPinned
       });
       showToast(newPinned ? 'Message pinned.' : 'Message unpinned.', 'success');
     } catch (err) {
@@ -707,8 +814,19 @@ export default function PortalChat({
       setMessages(prev => prev.map(m => ({ ...m, isDeleted: true, deletedAt: nowIso, deletedBy: myId, deletedRole: currentUserRole })));
       setAllMessagesList(prev => prev.map(m => msgsToClear.some(tc => tc.id === m.id) ? { ...m, isDeleted: true, deletedAt: nowIso, deletedBy: myId, deletedRole: currentUserRole } : m));
 
-      // Server REST batch
       const batchWrites = msgsToClear.map(msg => 
+        updateDoc(doc(db, 'portalMessages', msg.id), {
+          isDeleted: true,
+          deletedAt: nowIso,
+          deletedBy: myId,
+          deletedRole: currentUserRole,
+          deleteScope: 'for_everyone'
+        }).catch(err => console.error('Error clearing msg', msg.id, err))
+      );
+      await Promise.all(batchWrites);
+
+      // Server REST backup
+      msgsToClear.forEach(msg => {
         fetch('/api/portal/chat/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -718,9 +836,8 @@ export default function PortalChat({
             deletedRole: currentUserRole,
             deleteScope: 'for_everyone'
           })
-        }).catch(() => {})
-      );
-      await Promise.all(batchWrites);
+        }).catch(() => {});
+      });
 
       showToast('Chat cleared.', 'success');
     } catch (err) {
@@ -741,7 +858,17 @@ export default function PortalChat({
     setAllMessagesList(prev => prev.map(m => m.id === msg.id ? { ...m, isDeleted: true, deletedAt: nowIso, deletedBy: myId, deletedRole: currentUserRole } : m));
 
     try {
-      await fetch('/api/portal/chat/delete', {
+      // 1. Direct Firestore update
+      await updateDoc(doc(db, 'portalMessages', msg.id), {
+        isDeleted: true,
+        deletedAt: nowIso,
+        deletedBy: myId,
+        deletedRole: currentUserRole,
+        deletedScope: deleteScope
+      });
+
+      // 2. Server REST backup
+      fetch('/api/portal/chat/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -750,7 +877,7 @@ export default function PortalChat({
           deletedRole: currentUserRole,
           deleteScope
         })
-      });
+      }).catch(() => {});
 
       showToast('Message deleted.', 'success');
     } catch (err) {
@@ -793,7 +920,7 @@ export default function PortalChat({
 
     const { canonicalPortalId, canonicalPortalType, primaryConvId } = computeCanonicalIds();
 
-    // Process file attachment via uploadPortalFile
+    // Process file attachment via Firebase Storage / uploadPortalFile
     if (fileToUpload) {
       setIsUploading(true);
       try {
@@ -855,20 +982,34 @@ export default function PortalChat({
     });
 
     try {
-      const res = await fetch('/api/portal/chat/send', {
+      // 1. Direct write to Firestore portalMessages collection
+      await setDoc(doc(db, 'portalMessages', msgId), newMessage);
+
+      // 2. Backup write to backend REST server
+      fetch('/api/portal/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMessage)
-      });
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Server error');
-      }
+      }).catch(err => console.warn('REST backup send warning:', err));
+
       scrollToBottom(true);
     } catch (err: any) {
-      console.error('Send message error:', err);
-      showToast('Message delivery failed. Please check your connection.', 'error');
-      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'failed' } : m));
+      console.error('Failed to send message to Firestore, attempting REST fallback:', err);
+      try {
+        const res = await fetch('/api/portal/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newMessage)
+        });
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Server error');
+        }
+      } catch (restErr) {
+        console.error('Complete send failure:', restErr);
+        showToast('Message delivery failed. Please check your connection.', 'error');
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: 'failed' } : m));
+      }
     } finally {
       setIsSending(false);
     }
@@ -878,17 +1019,16 @@ export default function PortalChat({
   const handleRetryMessage = async (failedMsg: PortalMessage) => {
     setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, status: 'sending' } : m));
     try {
-      const res = await fetch('/api/portal/chat/send', {
+      await setDoc(doc(db, 'portalMessages', failedMsg.id), {
+        ...failedMsg,
+        status: 'sent',
+        sentAt: new Date().toISOString()
+      });
+      fetch('/api/portal/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...failedMsg, status: 'sent', sentAt: new Date().toISOString() })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, status: 'sent' } : m));
-      } else {
-        throw new Error(data.error || 'Retry failed');
-      }
+        body: JSON.stringify({ ...failedMsg, status: 'sent' })
+      }).catch(() => {});
     } catch {
       setMessages(prev => prev.map(m => m.id === failedMsg.id ? { ...m, status: 'failed' } : m));
       showToast('Retry failed. Please check connection.', 'error');

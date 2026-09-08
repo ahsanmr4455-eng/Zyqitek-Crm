@@ -93,7 +93,7 @@ import {
 } from './lib/firebaseSync';
 
 export default function App() {
-  // Mock localStorage to guarantee all operations are directed only to the backend database
+  // Mock localStorage to guarantee all operations are directed only to the MySQL backend
   const localStorage = {
     getItem: (..._args: any[]): any => null,
     setItem: (..._args: any[]): void => {},
@@ -250,7 +250,7 @@ export default function App() {
     return res;
   };
 
-  // State hooks loaded dynamically from database
+  // State hooks loaded dynamically from MySQL
   const [leads, setLeads] = useState<Lead[]>([]);
   const [calls, setCalls] = useState<CallLog[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -515,7 +515,7 @@ export default function App() {
     try {
       setSyncStatus('Syncing');
       setIsAutoSyncPaused(false);
-      showToast("Syncing local changes to server...", "success");
+      showToast("Syncing local changes to Firestore...", "success");
 
       const isConnected = await testFirestoreConnection();
       
@@ -539,17 +539,19 @@ export default function App() {
       });
       await fetchData();
 
+      
+
       if (isConnected && uploadSuccess) {
         setSyncStatus('Synced');
         setLastSyncTime(new Date());
-        showToast("Server synchronization completed successfully!", "success");
+        showToast("Cloud synchronization completed successfully!", "success");
       } else if (isConnected) {
         setSyncStatus('Synced');
         setLastSyncTime(new Date());
-        showToast("Synchronized with server storage.", "success");
+        showToast("Synchronized with Firestore cloud storage.", "success");
       } else {
         setSyncStatus('Error');
-        showToast("Sync warning: Could not reach server backend.", "error");
+        showToast("Sync warning: Could not reach Firestore cloud database.", "error");
       }
     } catch (err) {
       console.error("Error during manual sync:", err);
@@ -664,7 +666,7 @@ export default function App() {
     }
   };
 
-  const handleLogin = async (token?: string, csrfToken?: string, role?: string, skipBrandedLoading: boolean = false) => {
+  const handleLogin = async (token?: string, csrfToken?: string, role?: string, skipBrandedLoading: boolean = false, firebaseToken?: string) => {
     sessionStorage.setItem('zyqro_logged_in', 'true');
     if (token) {
       sessionStorage.setItem('zyqro_session_token', token);
@@ -677,6 +679,8 @@ export default function App() {
       sessionStorage.setItem('zyqro_user_role', role);
     }
 
+    // Removed debug log
+
     if (!skipBrandedLoading) {
       setIsBrandedLoading(true);
     } else {
@@ -686,6 +690,7 @@ export default function App() {
     if (!skipBrandedLoading) {
       showToast("Signed in successfully.", "success");
     }
+    
   };
 
   const handleLogout = () => {
@@ -693,6 +698,7 @@ export default function App() {
     sessionStorage.removeItem('zyqro_session_token');
     sessionStorage.removeItem('zyqro_csrf_token');
     sessionStorage.removeItem('zyqro_user_role');
+    sessionStorage.removeItem('zyqro_firebase_token');
     sessionStorage.removeItem('zyqro_crm_access_granted');
     sessionStorage.clear();
     document.cookie = "zyqro_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure";
@@ -1376,7 +1382,7 @@ export default function App() {
           return { success: false, lead, clientData: null, isExistingClient: false };
         }
 
-        // Secondary API endpoint (non-blocking)
+        // Secondary MySQL API endpoint (non-blocking)
         secureFetch('/api/add_client.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1481,10 +1487,10 @@ export default function App() {
         
       } else {
         const errorData = await response.json().catch(() => ({}));
-        showToast(errorData.error || `Failed to delete bulk leads from database.`, 'error');
+        showToast(errorData.error || `Failed to delete bulk leads from MySQL database.`, 'error');
       }
     } catch (err) {
-      showToast(`Network error: Failed to delete bulk leads.`, 'error');
+      showToast(`Network error: Failed to delete bulk leads from MySQL.`, 'error');
     }
   };
 
@@ -1626,10 +1632,10 @@ export default function App() {
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        showToast(errorData.error || "Failed to save call log to database.", "error");
+        showToast(errorData.error || "Failed to save call log to MySQL database.", "error");
       }
     } catch (err) {
-      showToast("Network error: Failed to log call to database.", "error");
+      showToast("Network error: Failed to log call to MySQL database.", "error");
     }
   };
 

@@ -6,8 +6,7 @@ coverage/
 dist/
 .env*
 !.env.example
-/firebase-applet-config.json
-!src/lib/firebase-applet-config.json
+firebase-applet-config.json
 *.patch
 temp_*
 fix_*.cjs

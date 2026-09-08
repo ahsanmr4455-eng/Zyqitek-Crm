@@ -117,16 +117,27 @@ export default function AccessCodeScreen({ onSuccess }: AccessCodeScreenProps) {
         res = null;
       }
 
-      // 2. If 405 (Method Not Allowed) or 404 from static host/CDN, try GET method with query parameter
+      // 2. If 405 (Method Not Allowed) or 404 from static host/CDN, try server-side aliases & GET methods
       if (!res || res.status === 405 || res.status === 404) {
-        try {
-          const getRes = await fetch(`/api/verify-access-code?code=${encodeURIComponent(trimmed)}`, {
-            method: 'GET'
-          });
-          if (getRes.status !== 405 && getRes.status !== 404) {
-            res = getRes;
-          }
-        } catch (_err) {}
+        const fallbacks = [
+          { url: '/api/verify_access_code.php', method: 'POST', body: JSON.stringify({ code: trimmed }) },
+          { url: `/api/verify-access-code?code=${encodeURIComponent(trimmed)}`, method: 'GET', body: undefined },
+          { url: `/api/verify_access_code.php?code=${encodeURIComponent(trimmed)}`, method: 'GET', body: undefined }
+        ];
+
+        for (const fb of fallbacks) {
+          try {
+            const fbRes = await fetch(fb.url, {
+              method: fb.method,
+              headers: fb.body ? { 'Content-Type': 'application/json' } : undefined,
+              body: fb.body
+            });
+            if (fbRes.status !== 405 && fbRes.status !== 404) {
+              res = fbRes;
+              break;
+            }
+          } catch (_err) {}
+        }
       }
 
       if (!res) {

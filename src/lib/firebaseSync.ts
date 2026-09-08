@@ -1,6 +1,6 @@
 /**
- * Client-Side CRM Synchronizer & Backend State Proxy.
- * Coordinates in-memory state and persistent local cache with secure server-side Express API endpoints.
+ * Firebase client-side synchronizer backend proxy.
+ * Communicates with secure server-side Express API endpoints to persist CRM collections in Firestore.
  * Bypasses iframe cookie restrictions by explicitly including the session token in the Authorization header.
  */
 
@@ -37,11 +37,11 @@ function getHeaders(extraHeaders: Record<string, string> = {}): Record<string, s
 export function handleSyncError(error: unknown, operationType: OperationType, path: string | null) {
   const errMsg = error instanceof Error ? error.message : String(error);
   if (errMsg.includes('401')) {
-    console.warn(`[SYNC WARNING] Operation: ${operationType} on ${path}: Unauthorized (session expired or invalid).`);
+    console.warn(`[FIREBASE SYNC WARNING] Operation: ${operationType} on ${path}: Unauthorized (session expired or invalid).`);
   } else if (errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('Network request failed')) {
-    console.info(`[SYNC NOTICE] Operation: ${operationType} on ${path}: Network fetch fallback (using local persistent storage).`);
+    console.info(`[FIREBASE SYNC NOTICE] Operation: ${operationType} on ${path}: Network fetch fallback (using local persistent storage).`);
   } else {
-    console.error(`[SYNC ERROR] Operation: ${operationType} on ${path}:`, error);
+    console.error(`[FIREBASE SYNC ERROR] Operation: ${operationType} on ${path}:`, error);
   }
   return {
     error: errMsg,
@@ -51,7 +51,7 @@ export function handleSyncError(error: unknown, operationType: OperationType, pa
 }
 
 /**
- * Test server connection on startup
+ * Test Firestore connection on startup
  */
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
@@ -66,15 +66,15 @@ export async function testFirestoreConnection(): Promise<boolean> {
     }
     if (!res.ok) return false;
     const data = await res.json();
-    return data.status === 'ok';
+    return data.status === 'ok' && data.firebaseOnline !== false;
   } catch (error) {
-    console.warn("[SYNC] Health check returned warning:", error);
+    console.warn("[FIREBASE SYNC] Health check returned warning:", error);
     return false;
   }
 }
 
 /**
- * Perform a complete sync of all CRM local data to server state
+ * Perform a complete sync of all CRM local data to Firestore
  */
 export async function syncAllCollectionsToFirestore(data: {
   leads?: any[];
@@ -90,7 +90,7 @@ export async function syncAllCollectionsToFirestore(data: {
   teamPortals?: any[];
   settings?: any;
 }): Promise<boolean> {
-  console.log("[FULL SYNC] Starting complete sync to server state...");
+  console.log("[FIREBASE FULL SYNC] Starting complete upload to Firestore...");
   try {
     const writePromises: Promise<boolean>[] = [];
 
@@ -130,10 +130,10 @@ export async function syncAllCollectionsToFirestore(data: {
 
     const results = await Promise.all(writePromises);
     const allSuccessful = results.every(res => res === true);
-    console.log(`[FULL SYNC] Sync completed. All successful: ${allSuccessful}`);
+    console.log(`[FIREBASE FULL SYNC] Sync completed. All successful: ${allSuccessful}`);
     return allSuccessful;
   } catch (err) {
-    console.error("[FULL SYNC ERROR]:", err);
+    console.error("[FIREBASE FULL SYNC ERROR]:", err);
     return false;
   }
 }
@@ -161,7 +161,7 @@ export function subscribeToCollection<T>(
       if (onError) onError(err);
     }
     if (active) {
-      timerId = setTimeout(poll, 60000); // Poll every 60s
+      timerId = setTimeout(poll, 60000); // Poll every 60s for real-time synchronization simulation (rate limit protected)
     }
   };
 
@@ -232,7 +232,7 @@ export async function getCollectionOnce<T>(collectionName: string): Promise<T[]>
  * Save or update a document securely via Express backend proxy
  */
 export async function saveToFirestore(collectionName: string, docId: string, data: any): Promise<boolean> {
-  console.log(`[PROXY WRITE] Saving to collection: ${collectionName}, Doc ID: ${docId}`);
+  console.log(`[FIREBASE PROXY WRITE] Saving to collection: ${collectionName}, Doc ID: ${docId}`);
   const localKey = `zyqro_persistent_collection_${collectionName}`;
   const cleanData = JSON.parse(JSON.stringify(data));
 
@@ -271,7 +271,7 @@ export async function saveToFirestore(collectionName: string, docId: string, dat
     }
 
     if (!res.ok) {
-      throw new Error(`Failed to save via proxy: HTTP ${res.status}`);
+      throw new Error(`Failed to save to Firestore via proxy: HTTP ${res.status}`);
     }
 
     const result = await res.json();
@@ -283,11 +283,11 @@ export async function saveToFirestore(collectionName: string, docId: string, dat
 }
 
 /**
- * Save multiple documents in a single batch
+ * Save multiple documents to Firestore/Persistent Storage in a single batch
  */
 export async function saveBatchToFirestore(collectionName: string, items: any[]): Promise<boolean> {
   if (!Array.isArray(items) || items.length === 0) return true;
-  console.log(`[BATCH WRITE] Saving ${items.length} items to collection: ${collectionName}`);
+  console.log(`[FIREBASE BATCH WRITE] Saving ${items.length} items to collection: ${collectionName}`);
   const localKey = `zyqro_persistent_collection_${collectionName}`;
   const cleanItems = JSON.parse(JSON.stringify(items));
 
@@ -321,7 +321,7 @@ export async function saveBatchToFirestore(collectionName: string, items: any[])
     }
 
     if (!res.ok) {
-      throw new Error(`Failed to batch save via proxy: HTTP ${res.status}`);
+      throw new Error(`Failed to batch save to Firestore via proxy: HTTP ${res.status}`);
     }
 
     const result = await res.json();
@@ -333,11 +333,11 @@ export async function saveBatchToFirestore(collectionName: string, items: any[])
 }
 
 /**
- * Delete a document securely via the Express server proxy.
- * Returns true if the server confirms successful deletion.
+ * Delete a document from Firestore securely via the Express server proxy.
+ * Returns true if the server/database confirms successful deletion.
  */
 export async function deleteFromFirestore(collectionName: string, docId: string): Promise<boolean> {
-  console.log("=== PROXY DELETE START ===");
+  console.log("=== FIREBASE PROXY DELETE START ===");
   console.log("Collection:", collectionName);
   console.log("Doc ID:", docId);
   const localKey = `zyqro_persistent_collection_${collectionName}`;
@@ -356,7 +356,7 @@ export async function deleteFromFirestore(collectionName: string, docId: string)
   }
   try {
     if (!docId) {
-      console.warn("[PROXY DELETE] Missing Doc ID!");
+      console.warn("[FIREBASE PROXY DELETE] Missing Doc ID!");
       return false;
     }
     const res = await fetch(`/api/supabase/collection/${collectionName}/${docId}`, {
@@ -373,25 +373,25 @@ export async function deleteFromFirestore(collectionName: string, docId: string)
 
     if (!res.ok) {
       const errorMsg = await res.text();
-      console.error(`=== PROXY DELETE ERROR: HTTP ${res.status} - ${errorMsg}`);
+      console.error(`=== FIREBASE PROXY DELETE ERROR: HTTP ${res.status} - ${errorMsg}`);
       throw new Error(errorMsg || `HTTP ${res.status}`);
     }
 
     const result = await res.json();
     if (result.success) {
-      console.log("=== PROXY DELETE SUCCESS ===");
+      console.log("=== FIREBASE PROXY DELETE SUCCESS ===");
       return true;
     }
-    console.warn("=== PROXY DELETE REJECTED ===", result);
+    console.warn("=== FIREBASE PROXY DELETE DB REJECTED ===", result);
     return false;
   } catch (err) {
-    console.error(`=== PROXY DELETE FAILED for ${collectionName}/${docId}:`, err);
+    console.error(`=== FIREBASE PROXY DELETE FAILED for ${collectionName}/${docId}:`, err);
     return false;
   }
 }
 
 /**
- * Sync array of items if collection is empty
+ * Sync array of items to Firestore if collection is empty
  */
 export async function seedCollectionIfEmpty(collectionName: string, initialItems: any[]): Promise<void> {
   try {
@@ -411,7 +411,7 @@ export async function seedCollectionIfEmpty(collectionName: string, initialItems
 }
 
 /**
- * Permanently purge all CRM collections and data records across in-memory state and local persistence.
+ * Permanently purge all CRM collections and data records across Firestore and backend databases.
  */
 export async function resetAllCrmData(): Promise<boolean> {
   console.log("=== RESET ALL CRM DATA REQUESTED ===");
@@ -428,7 +428,7 @@ export async function resetAllCrmData(): Promise<boolean> {
       keysToRemove.forEach(k => localStorage.removeItem(k));
     }
 
-    // 2. Call backend reset endpoint
+    // 2. Call backend reset endpoint to purge Firestore collections & MySQL records
     const res = await fetch('/api/reset-crm-data', {
       method: 'POST',
       headers: getHeaders({
@@ -455,10 +455,3 @@ export async function resetAllCrmData(): Promise<boolean> {
     return false;
   }
 }
-
-// Aliases for clean semantic usage
-export const saveDocument = saveToFirestore;
-export const saveBatchDocuments = saveBatchToFirestore;
-export const deleteDocument = deleteFromFirestore;
-export const testBackendConnection = testFirestoreConnection;
-export const syncAllCollections = syncAllCollectionsToFirestore;

@@ -1,7 +1,7 @@
 /**
  * File Storage & Transfer Manager
  * Provides real-time uploading, streaming download with progress tracking,
- * and reliable file synchronization with backend storage.
+ * and reliable file synchronization with Firebase Storage / backend persistence.
  */
 
 export interface UploadProgressCallback {
